@@ -1,0 +1,18 @@
+.DS_Store
+.env
+.env.*
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtualenvs
+.venv/
+backend/.venv/
+
+# Generated data
+backend/app.db
+backend/storage/
+backend/.pytest_cache/
