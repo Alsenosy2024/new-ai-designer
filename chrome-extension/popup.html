@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Architect Designer</title>
+  <link rel="stylesheet" href="css/popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">🏛️</span>
+        <span class="logo-text">AI Architect</span>
+      </div>
+      <div class="status-indicator" id="serverStatus">
+        <span class="status-dot offline"></span>
+        <span class="status-text">غير متصل</span>
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="project">المشروع</button>
+      <button class="tab" data-tab="design">التصميم</button>
+      <button class="tab" data-tab="results">النتائج</button>
+    </nav>
+
+    <!-- Project Tab -->
+    <div class="tab-content active" id="projectTab">
+      <form id="projectForm">
+        <div class="form-group">
+          <label for="projectName">اسم المشروع</label>
+          <input type="text" id="projectName" placeholder="مثال: برج المكاتب الرئيسي">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="region">المنطقة</label>
+            <select id="region">
+              <option value="saudi">السعودية</option>
+              <option value="uae">الإمارات</option>
+              <option value="qatar">قطر</option>
+              <option value="egypt">مصر</option>
+              <option value="international">دولي</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="buildingType">نوع المبنى</label>
+            <select id="buildingType">
+              <option value="office">مكتبي</option>
+              <option value="residential">سكني</option>
+              <option value="hotel">فندقي</option>
+              <option value="mixed_use">متعدد الاستخدام</option>
+              <option value="retail">تجاري</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="gfa">المساحة الإجمالية (م²)</label>
+            <input type="number" id="gfa" value="10000" min="500" max="500000">
+          </div>
+          <div class="form-group">
+            <label for="floors">عدد الطوابق</label>
+            <input type="number" id="floors" value="10" min="1" max="100">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="coreRatio">نسبة النواة (%)</label>
+            <input type="number" id="coreRatio" value="15" min="10" max="25">
+          </div>
+          <div class="form-group">
+            <label for="budget">الميزانية</label>
+            <select id="budget">
+              <option value="economy">اقتصادي</option>
+              <option value="standard" selected>قياسي</option>
+              <option value="premium">متميز</option>
+              <option value="luxury">فاخر</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="brief">وصف المشروع (اختياري)</label>
+          <textarea id="brief" rows="3" placeholder="أي متطلبات خاصة للمشروع..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="saveProject">
+          <span class="btn-icon">💾</span>
+          حفظ المشروع
+        </button>
+      </form>
+    </div>
+
+    <!-- Design Tab -->
+    <div class="tab-content" id="designTab">
+      <div class="design-options">
+        <h3>وكلاء التصميم</h3>
+
+        <div class="agent-list">
+          <div class="agent-item">
+            <div class="agent-info">
+              <span class="agent-icon">🏗️</span>
+              <div class="agent-details">
+                <span class="agent-name">التصميم المعماري</span>
+                <span class="agent-desc">المساقط والكتل والواجهات</span>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="agentArch" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="agent-item">
+            <div class="agent-info">
+              <span class="agent-icon">🔩</span>
+              <div class="agent-details">
+                <span class="agent-name">الهيكل الإنشائي</span>
+                <span class="agent-desc">الأعمدة والكمرات والأساسات</span>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="agentStruct" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="agent-item">
+            <div class="agent-info">
+              <span class="agent-icon">❄️</span>
+              <div class="agent-details">
+                <span class="agent-name">أنظمة MEP</span>
+                <span class="agent-desc">التكييف والكهرباء والسباكة</span>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="agentMep" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="agent-item">
+            <div class="agent-info">
+              <span class="agent-icon">🪑</span>
+              <div class="agent-details">
+                <span class="agent-name">التصميم الداخلي</span>
+                <span class="agent-desc">الأثاث والتشطيبات والإضاءة</span>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="agentInterior" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="design-settings">
+          <h4>إعدادات التنسيق</h4>
+          <div class="form-group">
+            <label for="maxIterations">الحد الأقصى للتكرارات</label>
+            <input type="number" id="maxIterations" value="5" min="1" max="10">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="autoResolve" checked>
+              حل التعارضات تلقائياً
+            </label>
+          </div>
+        </div>
+
+        <button class="btn btn-success" id="startDesign">
+          <span class="btn-icon">🚀</span>
+          بدء التصميم
+        </button>
+      </div>
+
+      <!-- Progress Section -->
+      <div class="progress-section hidden" id="progressSection">
+        <h3>جاري التصميم...</h3>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-status" id="progressStatus">تهيئة الوكلاء...</div>
+
+        <div class="agent-status-list" id="agentStatusList">
+          <!-- Agent statuses will be added here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Tab -->
+    <div class="tab-content" id="resultsTab">
+      <div class="no-results" id="noResults">
+        <span class="no-results-icon">📊</span>
+        <p>لم يتم تشغيل أي تصميم بعد</p>
+        <p class="hint">اذهب إلى تبويب "التصميم" للبدء</p>
+      </div>
+
+      <div class="results-content hidden" id="resultsContent">
+        <!-- Summary Cards -->
+        <div class="results-summary">
+          <div class="summary-card">
+            <span class="card-icon">🏢</span>
+            <div class="card-content">
+              <span class="card-value" id="buildingDims">-</span>
+              <span class="card-label">أبعاد المبنى</span>
+            </div>
+          </div>
+          <div class="summary-card">
+            <span class="card-icon">📐</span>
+            <div class="card-content">
+              <span class="card-value" id="efficiency">-</span>
+              <span class="card-label">الكفاءة</span>
+            </div>
+          </div>
+          <div class="summary-card">
+            <span class="card-icon">⚡</span>
+            <div class="card-content">
+              <span class="card-value" id="energyLoad">-</span>
+              <span class="card-label">حمل الطاقة</span>
+            </div>
+          </div>
+          <div class="summary-card">
+            <span class="card-icon">✅</span>
+            <div class="card-content">
+              <span class="card-value" id="conflictsResolved">-</span>
+              <span class="card-label">تعارضات محلولة</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Results -->
+        <div class="results-details">
+          <div class="accordion">
+            <div class="accordion-item">
+              <button class="accordion-header">
+                <span>🏗️ التصميم المعماري</span>
+                <span class="accordion-icon">▼</span>
+              </button>
+              <div class="accordion-content" id="archResults">
+                <!-- Architectural results -->
+              </div>
+            </div>
+
+            <div class="accordion-item">
+              <button class="accordion-header">
+                <span>🔩 الهيكل الإنشائي</span>
+                <span class="accordion-icon">▼</span>
+              </button>
+              <div class="accordion-content" id="structResults">
+                <!-- Structural results -->
+              </div>
+            </div>
+
+            <div class="accordion-item">
+              <button class="accordion-header">
+                <span>❄️ أنظمة MEP</span>
+                <span class="accordion-icon">▼</span>
+              </button>
+              <div class="accordion-content" id="mepResults">
+                <!-- MEP results -->
+              </div>
+            </div>
+
+            <div class="accordion-item">
+              <button class="accordion-header">
+                <span>🪑 التصميم الداخلي</span>
+                <span class="accordion-icon">▼</span>
+              </button>
+              <div class="accordion-content" id="interiorResults">
+                <!-- Interior results -->
+              </div>
+            </div>
+
+            <div class="accordion-item">
+              <button class="accordion-header">
+                <span>⚠️ التعارضات</span>
+                <span class="accordion-icon">▼</span>
+              </button>
+              <div class="accordion-content" id="conflictsResults">
+                <!-- Conflicts results -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="results-actions">
+          <button class="btn btn-secondary" id="exportResults">
+            <span class="btn-icon">📥</span>
+            تصدير التقرير
+          </button>
+          <button class="btn btn-primary" id="openViewer">
+            <span class="btn-icon">🖼️</span>
+            عرض ثلاثي الأبعاد
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>AI Architect Designer v1.0</span>
+      <a href="options.html" target="_blank">الإعدادات</a>
+    </footer>
+  </div>
+
+  <script src="js/popup.js"></script>
+</body>
+</html>
