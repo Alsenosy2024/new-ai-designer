@@ -1,12 +1,51 @@
+# Core Framework
 fastapi==0.115.0
 uvicorn==0.30.6
 sqlalchemy==2.0.32
 pydantic==2.8.2
-openpyxl==3.1.5
 httpx==0.27.2
+
+# Geometry & CAD
+shapely>=2.0.0
+networkx>=3.1
+scipy>=1.11.0
+svgwrite>=1.4.3
+ezdxf>=1.1.0
+
+# BIM & IFC
 ifcopenshell>=0.7.0
-numpy==2.1.1
-trimesh==4.4.1
-pygltflib==1.16.2
-eppy==0.5.63
+numpy>=2.0.0
+
+# 3D Modeling & Visualization
+trimesh>=4.4.1
+pygltflib>=1.16.2
+pyvista>=0.42.0
+
+# AI/ML Agents
+openai>=1.0.0
+anthropic>=0.18.0
+langchain>=0.1.0
+langchain-anthropic>=0.1.0
+langchain-openai>=0.1.0
+
+# Structural Analysis
 openseespy>=3.3.0
+anastruct>=1.5.0
+
+# Energy & Sustainability
+eppy>=0.5.63
+ladybug-core>=0.42.0
+
+# Optimization
+pymoo>=0.6.0
+optuna>=3.5.0
+
+# Reports & Exports
+openpyxl>=3.1.5
+reportlab>=4.0.0
+Pillow>=10.0.0
+
+# Utilities
+python-multipart>=0.0.6
+aiofiles>=23.0.0
+pyyaml>=6.0.0
