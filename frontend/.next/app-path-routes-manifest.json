@@ -1,0 +1,12 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/new-project/page": "/new-project",
+  "/page": "/",
+  "/project/[id]/3d-view/page": "/project/[id]/3d-view",
+  "/project/[id]/orchestrator/page": "/project/[id]/orchestrator",
+  "/project/[id]/outputs/page": "/project/[id]/outputs",
+  "/project/[id]/page": "/project/[id]",
+  "/project/[id]/plan-editor/page": "/project/[id]/plan-editor"
+}

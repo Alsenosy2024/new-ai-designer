@@ -8,17 +8,23 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-2) Start API
+2) Add environment config (optional but required for Gemini)
+
+cp .env.example .env
+# set GEMINI_API_KEY in .env
+
+3) Start API
 
 uvicorn app.main:app --reload --port 8001
 
 The API will be available at http://localhost:8001/api/state
 Static frontend will be served at http://localhost:8001/ if index.html is present in the repo root.
 Generated files are under backend/storage and are exposed at http://localhost:8001/files/.
+This FastAPI server replaces SimpleHTTPServer for local runs.
 
 Environment variables
 
-DATABASE_URL: SQLAlchemy URL, default sqlite:///./app.db
+DATABASE_URL: SQLAlchemy URL, default backend/app.db
 CORS_ORIGINS: comma-separated list, default *
 STORAGE_DIR: override storage directory
 DEFAULT_FLOOR_HEIGHT: height per floor (meters)
@@ -29,6 +35,8 @@ GEMINI_BASE_URL: Gemini API base URL
 LLM_TEMPERATURE: LLM temperature (0-1), default 0.2
 LLM_MAX_TOKENS: max tokens, default 1024
 LLM_TIMEOUT: request timeout seconds, default 40
+GEMINI_DESIGN_API_KEY: Gemini Design MCP API key (for UI generation tooling)
+GEMINI_DESIGN_MCP_URL: Gemini Design MCP server URL
 
 ENERGYPLUS_PATH: path to energyplus binary (required for real energy simulation)
 ENERGYPLUS_WEATHER: path to EPW weather file

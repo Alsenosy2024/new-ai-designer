@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -9,6 +9,20 @@ from app.db import Base
 
 def generate_id():
     return str(uuid.uuid4())
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, default=generate_id)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String, default="")
+    role = Column(String, default="user")
+    is_active = Column(Boolean, default=True)
+    last_login_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now(), server_default=func.now())
 
 
 class Project(Base):
@@ -62,6 +76,9 @@ class Run(Base):
     artifacts = relationship(
         "Artifact", back_populates="run", cascade="all, delete-orphan"
     )
+    plan_revision = relationship(
+        "PlanRevision", back_populates="run", uselist=False, cascade="all, delete-orphan"
+    )
 
 
 class Output(Base):
@@ -77,6 +94,7 @@ class Output(Base):
     energy_score = Column(Float, default=0)
     structural_score = Column(Float, default=0)
     ifc_file = Column(String, default="")
+    dxf_file = Column(String, default="")
     mep_schedule_file = Column(String, default="")
     energy_report_file = Column(String, default="")
     review_package_file = Column(String, default="")
@@ -111,3 +129,13 @@ class Artifact(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     run = relationship("Run", back_populates="artifacts")
+
+
+class PlanRevision(Base):
+    __tablename__ = "plan_revisions"
+
+    run_id = Column(String, ForeignKey("runs.id"), primary_key=True)
+    payload = Column(Text, default="")
+    updated_at = Column(DateTime, onupdate=func.now(), server_default=func.now())
+
+    run = relationship("Run", back_populates="plan_revision")

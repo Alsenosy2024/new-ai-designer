@@ -17,6 +17,11 @@ const STATE_KEY = "aiDesignerState";
 const API_BASES = ["", "http://localhost:8001"];
 let activeApiBase = "";
 
+function setActiveApiBase(base) {
+  activeApiBase = base;
+  window.aiDesignerApiBase = base;
+}
+
 const defaultState = {
   project: {
     id: "",
@@ -238,10 +243,57 @@ const translations = {
     "outputs.title": "BIM Deliverables",
     "outputs.lead":
       "Export IFC, drawings, schedules, and performance reports ready for stakeholder review.",
+    "outputs.review_files": "Review Files",
+    "outputs.review_files_empty": "No review files yet.",
     "outputs.review_run": "Review Run",
     "outputs.share_client": "Share to Client",
     "outputs.delivery_files": "Delivery Files",
     "outputs.plan_preview": "Plan + 3D Preview",
+    "outputs.plan_workspace": "Plan Workspace",
+    "outputs.plan_subtitle": "Edit and coordinate 2D layout",
+    "outputs.plan_undo": "Undo",
+    "outputs.plan_redo": "Redo",
+    "outputs.plan_snap": "Snap",
+    "outputs.plan_grid": "Grid",
+    "outputs.plan_save": "Save",
+    "outputs.plan_zoom_in": "Zoom in",
+    "outputs.plan_zoom_out": "Zoom out",
+    "outputs.plan_fit": "Fit",
+    "outputs.plan_reset": "Reset",
+    "outputs.plan_fullscreen": "Full screen",
+    "outputs.plan_loading": "Loading plan...",
+    "outputs.plan_hint": "Drag to pan • Scroll to zoom",
+    "outputs.properties": "Properties",
+    "outputs.layers": "Layers",
+    "outputs.property_tool": "Tool",
+    "outputs.property_layer": "Layer",
+    "outputs.property_snaps": "Snap",
+    "outputs.layer_arch": "Architectural",
+    "outputs.layer_struct": "Structural",
+    "outputs.layer_mep": "MEP",
+    "outputs.layer_annotations": "Axes + Dimensions",
+    "outputs.review_notes": "Architectural Review Notes",
+    "outputs.review_badge": "Architectural",
+    "outputs.review_empty": "No review notes yet.",
+    "outputs.review_category": "Category",
+    "outputs.review_category_default": "Select",
+    "outputs.review_category_layout": "Layout",
+    "outputs.review_category_core": "Core",
+    "outputs.review_category_circulation": "Circulation",
+    "outputs.review_category_facade": "Facade",
+    "outputs.review_category_code": "Code compliance",
+    "outputs.review_category_mep": "MEP coordination",
+    "outputs.review_priority": "Priority",
+    "outputs.review_priority_default": "Select",
+    "outputs.review_priority_low": "Low",
+    "outputs.review_priority_medium": "Medium",
+    "outputs.review_priority_high": "High",
+    "outputs.review_priority_urgent": "Urgent",
+    "outputs.review_placeholder": "Add architectural feedback",
+    "outputs.review_submit": "Submit Note",
+    "outputs.review_approve": "Approve",
+    "outputs.review_approve_generate": "Approve & Generate Disciplines",
+    "outputs.review_pending": "Awaiting architectural approval. Approve to generate structural + MEP.",
     "outputs.model_health": "Model Health",
     "outputs.quantity_summary": "Quantity Summary",
     "outputs.stakeholder_pack": "Stakeholder Pack",
@@ -446,10 +498,57 @@ const translations = {
     "outputs.eyebrow": "المخرجات",
     "outputs.title": "مخرجات BIM",
     "outputs.lead": "تصدير IFC والرسومات والجداول وتقارير الأداء للعرض.",
+    "outputs.review_files": "ملفات المراجعة",
+    "outputs.review_files_empty": "لا توجد ملفات مراجعة بعد.",
     "outputs.review_run": "مراجعة التشغيل",
     "outputs.share_client": "مشاركة مع العميل",
     "outputs.delivery_files": "ملفات التسليم",
     "outputs.plan_preview": "معاينة المخطط و3D",
+    "outputs.plan_workspace": "مساحة المخطط",
+    "outputs.plan_subtitle": "تحرير وتنسيق المخطط ثنائي الأبعاد",
+    "outputs.plan_undo": "تراجع",
+    "outputs.plan_redo": "إعادة",
+    "outputs.plan_snap": "تطابق",
+    "outputs.plan_grid": "شبكة",
+    "outputs.plan_save": "حفظ",
+    "outputs.plan_zoom_in": "تكبير",
+    "outputs.plan_zoom_out": "تصغير",
+    "outputs.plan_fit": "ملاءمة",
+    "outputs.plan_reset": "إعادة ضبط",
+    "outputs.plan_fullscreen": "شاشة كاملة",
+    "outputs.plan_loading": "جاري تحميل المخطط...",
+    "outputs.plan_hint": "اسحب للتحريك • عجلة الفأرة للتكبير",
+    "outputs.properties": "الخصائص",
+    "outputs.layers": "الطبقات",
+    "outputs.property_tool": "الأداة",
+    "outputs.property_layer": "الطبقة",
+    "outputs.property_snaps": "التطابق",
+    "outputs.layer_arch": "معماري",
+    "outputs.layer_struct": "إنشائي",
+    "outputs.layer_mep": "كهروميكانيك",
+    "outputs.layer_annotations": "محاور + أبعاد",
+    "outputs.review_notes": "ملاحظات المراجعة المعمارية",
+    "outputs.review_badge": "معماري",
+    "outputs.review_empty": "لا توجد ملاحظات بعد.",
+    "outputs.review_category": "التصنيف",
+    "outputs.review_category_default": "اختر",
+    "outputs.review_category_layout": "التوزيع",
+    "outputs.review_category_core": "النواة",
+    "outputs.review_category_circulation": "الحركة",
+    "outputs.review_category_facade": "الواجهة",
+    "outputs.review_category_code": "التوافق مع الأكواد",
+    "outputs.review_category_mep": "تنسيق MEP",
+    "outputs.review_priority": "الأولوية",
+    "outputs.review_priority_default": "اختر",
+    "outputs.review_priority_low": "منخفضة",
+    "outputs.review_priority_medium": "متوسطة",
+    "outputs.review_priority_high": "عالية",
+    "outputs.review_priority_urgent": "عاجلة",
+    "outputs.review_placeholder": "اكتب ملاحظاتك المعمارية هنا",
+    "outputs.review_submit": "إضافة ملاحظة",
+    "outputs.review_approve": "اعتماد",
+    "outputs.review_approve_generate": "اعتماد وتوليد التخصصات",
+    "outputs.review_pending": "بانتظار اعتماد التصميم المعماري. اعتمد لبدء الإنشائي وMEP.",
     "outputs.model_health": "صحة النموذج",
     "outputs.quantity_summary": "ملخص الكميات",
     "outputs.stakeholder_pack": "حزمة أصحاب المصلحة",
@@ -791,6 +890,14 @@ function applyFileLinks(state) {
   });
 }
 
+function updateReviewApproveLabel(state) {
+  if (!reviewApprove) return;
+  const key = isArchitectureOnly(state)
+    ? "outputs.review_approve_generate"
+    : "outputs.review_approve";
+  reviewApprove.dataset.i18n = key;
+}
+
 function broadcastState(state) {
   window.aiDesignerState = state;
   window.aiDesignerFilesBase =
@@ -805,9 +912,12 @@ function applyState(state) {
   applyProgressBindings(state);
   applyFileDrop(state);
   applyFileLinks(state);
+  updateReviewApproveLabel(state);
   broadcastState(state);
   applyTranslations();
   refreshRunEvents();
+  refreshReviewNotes();
+  refreshRunArtifacts();
 }
 
 function mapApiToState(payload) {
@@ -929,11 +1039,25 @@ async function requestApi(base, path, options = {}) {
   return response.json();
 }
 
+async function getApiState() {
+  const bases = activeApiBase ? [activeApiBase] : API_BASES;
+  for (const base of bases) {
+    try {
+      const data = await requestApi(base, "/api/state");
+      setActiveApiBase(base);
+      return data;
+    } catch (error) {
+      continue;
+    }
+  }
+  return null;
+}
+
 async function fetchApiState() {
   for (const base of API_BASES) {
     try {
       const data = await requestApi(base, "/api/state");
-      activeApiBase = base;
+      setActiveApiBase(base);
       return data;
     } catch (error) {
       if (String(error).includes("404")) {
@@ -942,7 +1066,7 @@ async function fetchApiState() {
             method: "POST",
             body: JSON.stringify(mapStateToApi(defaultState)),
           });
-          activeApiBase = base;
+          setActiveApiBase(base);
           return data;
         } catch (innerError) {
           continue;
@@ -962,7 +1086,7 @@ async function postApiState(state) {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      activeApiBase = base;
+      setActiveApiBase(base);
       return data;
     } catch (error) {
       continue;
@@ -971,15 +1095,23 @@ async function postApiState(state) {
   return null;
 }
 
-async function startApiRun(projectId) {
+async function startApiRun(projectId, stage = "") {
   const bases = activeApiBase ? [activeApiBase] : API_BASES;
   for (const base of bases) {
     try {
-      const query = projectId ? `?project_id=${projectId}` : "";
+      const stageParam = stage ? `stage=${encodeURIComponent(stage)}` : "";
+      let query = "";
+      if (projectId && stageParam) {
+        query = `?project_id=${projectId}&${stageParam}`;
+      } else if (projectId) {
+        query = `?project_id=${projectId}`;
+      } else if (stageParam) {
+        query = `?${stageParam}`;
+      }
       const data = await requestApi(base, `/api/runs/start${query}`, {
         method: "POST",
       });
-      activeApiBase = base;
+      setActiveApiBase(base);
       return data;
     } catch (error) {
       continue;
@@ -994,9 +1126,11 @@ async function initializeState() {
     const mapped = mapApiToState(apiState);
     saveState(mapped);
     applyState(mapped);
+    refreshStateIfRunning();
     return;
   }
   applyState(loadState());
+  refreshStateIfRunning();
 }
 
 setCurrentLang(getCurrentLang());
@@ -1037,12 +1171,18 @@ if (actionButtons.length) {
         state.outputs.generatedAt = "Pending generation";
         saveState(state);
         const apiState = await postApiState(state);
+        let mapped = apiState ? mapApiToState(apiState) : state;
         if (apiState) {
-          const mapped = mapApiToState(apiState);
           saveState(mapped);
           applyState(mapped);
         }
-        window.location.href = "orchestrator.html";
+        const runState = await startApiRun(mapped.project.id, "architectural");
+        if (runState) {
+          mapped = mapApiToState(runState);
+          saveState(mapped);
+          applyState(mapped);
+        }
+        window.location.href = "outputs.html";
         return;
       }
 
@@ -1184,8 +1324,16 @@ const orchestratorSteps = Array.from(
 );
 const orchestratorLog = document.getElementById("orchestrator-log");
 const decisionFeed = document.querySelector("[data-decision-feed]");
+const reviewFeed = document.querySelector("[data-review-feed]");
+const reviewForm = document.querySelector("[data-review-form]");
+const reviewInput = document.querySelector("[data-review-input]");
+const reviewCategory = document.querySelector("[data-review-category]");
+const reviewPriority = document.querySelector("[data-review-priority]");
+const reviewApprove = document.querySelector("[data-review-approve]");
+const artifactList = document.querySelector("[data-artifact-list]");
 
 let isOrchestratorRunning = false;
+let isStateRefreshing = false;
 
 const orchestratorMessages = {
   en: [
@@ -1219,6 +1367,15 @@ function buildFileBase(projectName) {
   return base || "Project";
 }
 
+function isArchitectureOnly(state) {
+  const nextRun = String(state?.project?.nextRun || "").toLowerCase();
+  const awaiting = nextRun.includes("architectural");
+  const outputs = state?.outputs || {};
+  const missingDisciplines = !outputs.mepScheduleFile && !outputs.energyReportFile &&
+    !outputs.reviewPackageFile;
+  return awaiting || missingDisciplines;
+}
+
 function finalizeOrchestratorRun() {
   const state = loadState();
   state.run.status = "Complete";
@@ -1245,6 +1402,53 @@ function finalizeOrchestratorRun() {
   applyState(state);
 }
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function pollRunCompletion(maxAttempts = 20, intervalMs = 1200) {
+  const bases = activeApiBase ? [activeApiBase] : API_BASES;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    for (const base of bases) {
+      try {
+        const data = await requestApi(base, "/api/state");
+        setActiveApiBase(base);
+        const status = String(data?.run?.status || "").toLowerCase();
+        if (status && !status.includes("progress") && status !== "queued") {
+          return data;
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+    await wait(intervalMs);
+  }
+  return null;
+}
+
+async function refreshStateFromApi() {
+  if (isStateRefreshing) return;
+  isStateRefreshing = true;
+  try {
+    const apiState = await getApiState();
+    if (apiState) {
+      const mapped = mapApiToState(apiState);
+      saveState(mapped);
+      applyState(mapped);
+    }
+  } finally {
+    isStateRefreshing = false;
+  }
+}
+
+function refreshStateIfRunning() {
+  const state = loadState();
+  const status = String(state?.run?.status || "").toLowerCase();
+  if (status.includes("progress")) {
+    refreshStateFromApi();
+  }
+}
+
 async function runOrchestrator() {
   if (isOrchestratorRunning) return;
   isOrchestratorRunning = true;
@@ -1260,44 +1464,87 @@ async function runOrchestrator() {
   saveState(activeState);
   applyState(activeState);
 
-  const apiPromise = startApiRun(activeState.project.id);
-
-  const messages = orchestratorMessages[getCurrentLang()] || orchestratorMessages.en;
-  messages.forEach((message, index) => {
-    const delay = index * 850;
-    setTimeout(() => {
-      orchestratorSteps.forEach((step, stepIndex) => {
-        step.classList.toggle("is-running", stepIndex === index);
-        step.classList.toggle("is-done", stepIndex < index);
-      });
-
-      if (orchestratorLog) {
-        orchestratorLog.textContent = message;
-      }
-
-      if (index === orchestratorMessages.length - 1) {
-        setTimeout(async () => {
-          orchestratorSteps.forEach((step) => step.classList.add("is-done"));
-          if (orchestratorLog) {
-            orchestratorLog.textContent = translate("log.orchestrator_complete");
-          }
-          const apiState = await apiPromise;
-          if (apiState) {
-            const mapped = mapApiToState(apiState);
-            saveState(mapped);
-            applyState(mapped);
-          } else {
-            finalizeOrchestratorRun();
-          }
-          isOrchestratorRunning = false;
-        }, 850);
-      }
-    }, delay);
-  });
+  const apiState = await startApiRun(activeState.project.id, "architectural");
+  if (apiState) {
+    const mapped = mapApiToState(apiState);
+    saveState(mapped);
+    applyState(mapped);
+  }
+  const completed = await pollRunCompletion();
+  if (completed) {
+    const refreshed = mapApiToState(completed);
+    saveState(refreshed);
+    applyState(refreshed);
+  } else {
+    finalizeOrchestratorRun();
+  }
+  isOrchestratorRunning = false;
 }
 
 if (orchestratorButton) {
   orchestratorButton.addEventListener("click", runOrchestrator);
+}
+
+const orchestratorStepMap = {
+  start: 0,
+  init: 0,
+  llm: 0,
+  architecture: 1,
+  agents: 1,
+  structure: 2,
+  structural: 2,
+  mep: 3,
+  energy: 4,
+  ifc: 5,
+  gltf: 5,
+  package: 5,
+  summary: 5,
+};
+
+function applyOrchestratorProgress(events = [], state = loadState()) {
+  if (!orchestratorSteps.length) return;
+  const status = String(state?.run?.status || "").toLowerCase();
+  const isRunning = status.includes("progress");
+  let highest = -1;
+  let lastMessage = "";
+
+  events.forEach((event) => {
+    const key = String(event.step || "").toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(orchestratorStepMap, key)) {
+      highest = Math.max(highest, orchestratorStepMap[key]);
+    }
+    if (event.message) {
+      lastMessage = event.message;
+    }
+  });
+
+  if (status === "review" && isArchitectureOnly(state)) {
+    orchestratorSteps.forEach((step, idx) => {
+      step.classList.toggle("is-done", idx <= 1);
+      step.classList.toggle("is-running", false);
+    });
+    if (orchestratorLog) {
+      orchestratorLog.textContent = translate("outputs.review_pending");
+    }
+    return;
+  }
+
+  const runningIndex = isRunning
+    ? Math.min(Math.max(highest + 1, 0), orchestratorSteps.length - 1)
+    : -1;
+
+  orchestratorSteps.forEach((step, idx) => {
+    step.classList.toggle("is-done", idx <= highest && highest >= 0);
+    step.classList.toggle("is-running", idx === runningIndex);
+  });
+
+  if (orchestratorLog) {
+    if (lastMessage) {
+      orchestratorLog.textContent = lastMessage;
+    } else if (!isRunning && status === "complete") {
+      orchestratorLog.textContent = translate("log.orchestrator_complete");
+    }
+  }
 }
 
 async function refreshRunEvents() {
@@ -1308,13 +1555,69 @@ async function refreshRunEvents() {
   for (const base of bases) {
     try {
       const events = await requestApi(base, `/api/runs/${state.run.id}/events`);
-      if (events && events.length) {
-        activeApiBase = base;
-        decisionFeed.innerHTML = "";
+      if (!events) continue;
+      setActiveApiBase(base);
+      decisionFeed.innerHTML = "";
+      if (events.length) {
         events.slice(-8).forEach((event) => {
           const row = document.createElement("p");
           row.textContent = event.message;
           decisionFeed.appendChild(row);
+        });
+      }
+      applyOrchestratorProgress(events, state);
+      return;
+    } catch (error) {
+      continue;
+    }
+  }
+}
+
+async function postRunEvent(runId, message, step = "review", level = "info") {
+  if (!runId || !message) return null;
+  const bases = activeApiBase ? [activeApiBase] : API_BASES;
+  for (const base of bases) {
+    try {
+      const data = await requestApi(base, `/api/runs/${runId}/events`, {
+        method: "POST",
+        body: JSON.stringify({ message, step, level }),
+      });
+      setActiveApiBase(base);
+      return data;
+    } catch (error) {
+      continue;
+    }
+  }
+  return null;
+}
+
+async function refreshReviewNotes() {
+  if (!reviewFeed) return;
+  const state = loadState();
+  if (!state?.run?.id) return;
+  const bases = activeApiBase ? [activeApiBase] : API_BASES;
+  for (const base of bases) {
+    try {
+      const events = await requestApi(base, `/api/runs/${state.run.id}/events`);
+      if (events) {
+        setActiveApiBase(base);
+        const notes = events.filter(
+          (event) => event.step === "review" || event.step === "change_request"
+        );
+        reviewFeed.innerHTML = "";
+        if (!notes.length) {
+          const empty = document.createElement("p");
+          empty.classList.add("muted");
+          empty.textContent = isArchitectureOnly(state)
+            ? translate("outputs.review_pending")
+            : translate("outputs.review_empty");
+          reviewFeed.appendChild(empty);
+          return;
+        }
+        notes.slice(-8).forEach((event) => {
+          const row = document.createElement("p");
+          row.textContent = event.message;
+          reviewFeed.appendChild(row);
         });
         return;
       }
@@ -1324,12 +1627,118 @@ async function refreshRunEvents() {
   }
 }
 
-if (decisionFeed) {
+async function refreshRunArtifacts() {
+  if (!artifactList) return;
+  const state = loadState();
+  if (!state?.run?.id) return;
+  const bases = activeApiBase ? [activeApiBase] : API_BASES;
+  const allowedKinds = new Set(["structural_plan", "structural", "mep"]);
+  for (const base of bases) {
+    try {
+      const artifacts = await requestApi(base, `/api/runs/${state.run.id}/artifacts`);
+      if (!artifacts) continue;
+      setActiveApiBase(base);
+      artifactList.innerHTML = "";
+      const filtered = artifacts.filter((artifact) => allowedKinds.has(artifact.kind));
+      if (!filtered.length) {
+        const empty = document.createElement("li");
+        empty.classList.add("muted");
+        empty.textContent = translate("outputs.review_files_empty");
+        artifactList.appendChild(empty);
+        return;
+      }
+      filtered.forEach((artifact) => {
+        const li = document.createElement("li");
+        const meta = document.createElement("div");
+        const title = document.createElement("p");
+        const subtitle = document.createElement("p");
+        title.className = "queue-title";
+        title.textContent = artifact.file_name;
+        subtitle.className = "queue-meta";
+        subtitle.textContent = artifact.description || artifact.kind;
+        meta.appendChild(title);
+        meta.appendChild(subtitle);
+
+        const link = document.createElement("a");
+        link.className = "btn ghost";
+        link.textContent = translate("outputs.download");
+        const url = buildFileUrl(state, artifact.file_name);
+        if (url) {
+          link.setAttribute("href", url);
+          link.setAttribute("download", artifact.file_name);
+        } else {
+          link.classList.add("is-disabled");
+        }
+        li.appendChild(meta);
+        li.appendChild(link);
+        artifactList.appendChild(li);
+      });
+      return;
+    } catch (error) {
+      continue;
+    }
+  }
+}
+
+if (reviewForm && reviewInput) {
+  reviewForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const rawMessage = reviewInput.value.trim();
+    if (!rawMessage) return;
+    const categoryText =
+      reviewCategory?.value && reviewCategory.selectedOptions?.[0]
+        ? reviewCategory.selectedOptions[0].textContent.trim()
+        : "";
+    const priorityText =
+      reviewPriority?.value && reviewPriority.selectedOptions?.[0]
+        ? reviewPriority.selectedOptions[0].textContent.trim()
+        : "";
+    const tags = [categoryText, priorityText].filter(Boolean);
+    const message = tags.length ? `[${tags.join(" | ")}] ${rawMessage}` : rawMessage;
+    const state = loadState();
+    if (!state?.run?.id) return;
+    const step = tags.length ? "change_request" : "review";
+    await postRunEvent(state.run.id, message, step, "info");
+    reviewInput.value = "";
+    if (reviewCategory) reviewCategory.value = "";
+    if (reviewPriority) reviewPriority.value = "";
+    refreshReviewNotes();
+  });
+}
+
+if (reviewApprove) {
+  reviewApprove.addEventListener("click", async () => {
+    const state = loadState();
+    if (!state?.run?.id) return;
+    await postRunEvent(state.run.id, "Architectural review approved.", "review", "success");
+    if (isArchitectureOnly(state)) {
+      state.project.status = "Running";
+      state.project.nextRun = "Discipline generation";
+      state.run.status = "In progress";
+      state.run.updatedAt = "Updated moments ago";
+      state.outputs.generatedAt = "Pending generation";
+      saveState(state);
+      applyState(state);
+      const runState = await startApiRun(state.project.id, "full");
+      if (runState) {
+        const mapped = mapApiToState(runState);
+        saveState(mapped);
+        applyState(mapped);
+      }
+    }
+    refreshReviewNotes();
+  });
+}
+
+const shouldPoll = decisionFeed || reviewFeed || artifactList;
+if (shouldPoll) {
   refreshRunEvents();
+  refreshReviewNotes();
+  refreshRunArtifacts();
   setInterval(() => {
     const state = loadState();
     if (state?.run?.status && state.run.status.toLowerCase().includes("progress")) {
-      refreshRunEvents();
+      refreshStateFromApi();
     }
   }, 5000);
 }

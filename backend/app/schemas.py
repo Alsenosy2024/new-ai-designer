@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProjectPayload(BaseModel):
@@ -44,6 +44,7 @@ class OutputPayload(BaseModel):
     energy_score: Optional[float] = 0
     structural_score: Optional[float] = 0
     ifc_file: Optional[str] = ""
+    dxf_file: Optional[str] = ""
     mep_schedule_file: Optional[str] = ""
     energy_report_file: Optional[str] = ""
     review_package_file: Optional[str] = ""
@@ -104,6 +105,7 @@ class OutputResponse(BaseModel):
     energy_score: float
     structural_score: float
     ifc_file: str
+    dxf_file: str
     mep_schedule_file: str
     energy_report_file: str
     review_package_file: str
@@ -123,6 +125,12 @@ class RunEventResponse(BaseModel):
     created_at: Optional[datetime] = None
 
 
+class RunEventCreate(BaseModel):
+    message: str
+    step: Optional[str] = ""
+    level: Optional[str] = "info"
+
+
 class ArtifactResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -132,6 +140,65 @@ class ArtifactResponse(BaseModel):
     file_name: str
     description: str
     created_at: Optional[datetime] = None
+
+
+class UserCreate(BaseModel):
+    email: str
+    password: str = Field(min_length=8)
+    full_name: Optional[str] = ""
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        email = value.strip().lower()
+        if "@" not in email:
+            raise ValueError("Invalid email address")
+        return email
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        email = value.strip().lower()
+        if "@" not in email:
+            raise ValueError("Invalid email address")
+        return email
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    full_name: str
+    role: str
+    is_active: bool
+    last_login_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: Optional[UserResponse] = None
+
+
+class PlanRevisionPayload(BaseModel):
+    payload: Dict[str, Any]
+
+
+class PlanRevisionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    run_id: str
+    payload: Dict[str, Any]
+    updated_at: Optional[datetime] = None
 
 
 class StateResponse(BaseModel):

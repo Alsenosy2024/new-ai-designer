@@ -1,18 +1,38 @@
-.DS_Store
-.env
-.env.*
-*.log
-
-# Python
+# Dependencies
+node_modules/
 __pycache__/
-*.py[cod]
-*.egg-info/
-
-# Virtualenvs
+*.pyc
 .venv/
-backend/.venv/
+venv/
 
-# Generated data
-backend/app.db
-backend/storage/
-backend/.pytest_cache/
+# Build outputs
+dist/
+build/
+*.db
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Storage
+storage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# Logs
+*.log
+npm-debug.log*

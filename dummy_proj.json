@@ -1,0 +1,9 @@
+{
+    "project": {
+        "name": "Extension Connectivity Test",
+        "type": "Office",
+        "region": "Riyadh",
+        "gfa": "5000",
+        "floors": "5"
+    }
+}

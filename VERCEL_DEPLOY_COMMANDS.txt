@@ -1,0 +1,48 @@
+==============================================
+🚀 أوامر النشر السريع على Vercel
+==============================================
+
+📦 الخطوة 1: نشر Frontend
+----------------------------
+cd frontend
+vercel --prod
+
+🔧 Environment Variables (أضفها في Vercel Dashboard):
+- VITE_API_BASE_URL=https://ai-designer-backend.vercel.app
+- VITE_GEMINI_DESIGN_API_KEY=gd_H-xso1nO5IgOfVvTDknD_XCmQfxmsJXi
+- VITE_GEMINI_DESIGN_MCP_URL=https://gemini-design-mcp-server-production.up.railway.app/mcp
+
+
+📦 الخطوة 2: نشر Backend
+----------------------------
+cd ../backend
+vercel --prod
+
+🔧 Environment Variables (أضفها في Vercel Dashboard):
+- GEMINI_API_KEY=AIzaSyDXIWzufJ7c5FAgX6qbqh9qxHMdEdMDwz0
+- GEMINI_MODEL=gemini-1.5-pro
+- CORS_ORIGINS=*
+
+
+✅ بعد النشر:
+----------------------------
+1. احصل على URL الـ Backend من Vercel
+2. حدّث VITE_API_BASE_URL في Frontend
+3. أعد نشر Frontend: vercel --prod
+
+
+🌐 الروابط النهائية:
+----------------------------
+Frontend: https://ai-designer-frontend.vercel.app
+Backend: https://ai-designer-backend.vercel.app
+
+
+⚠️ ملاحظة مهمة:
+----------------------------
+إذا كان Backend كبير جداً (>50MB)، استخدم Railway بدلاً من Vercel:
+railway login
+cd backend
+railway init
+railway up
+
+==============================================

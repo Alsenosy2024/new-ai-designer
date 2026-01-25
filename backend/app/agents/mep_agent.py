@@ -79,7 +79,12 @@ SPACE_LOADS = {
     "lobby": {"lighting": 15, "equipment": 5, "occupancy": 8},
     "retail": {"lighting": 20, "equipment": 10, "occupancy": 15},
     "restaurant": {"lighting": 15, "equipment": 30, "occupancy": 20},
+    "apartment": {"lighting": 8, "equipment": 8, "occupancy": 6},
+    "corridor": {"lighting": 6, "equipment": 0, "occupancy": 2},
+    "service": {"lighting": 6, "equipment": 5, "occupancy": 1},
+    "core": {"lighting": 4, "equipment": 0, "occupancy": 0},
     "hotel_room": {"lighting": 10, "equipment": 8, "occupancy": 5},
+    "guest_room": {"lighting": 10, "equipment": 8, "occupancy": 5},
     "parking": {"lighting": 5, "equipment": 0, "occupancy": 0}
 }
 
@@ -257,7 +262,9 @@ class HVACDesigner:
     def design_ahu(
         self,
         zones: List[ThermalZone],
-        system_type: HVACSystemType
+        system_type: HVACSystemType,
+        anchor: Optional[Tuple[float, float]] = None,
+        bounds: Optional[Dict[str, float]] = None,
     ) -> List[AHU]:
         """Design Air Handling Units"""
         ahus = []
@@ -272,6 +279,13 @@ class HVACDesigner:
 
         # Design AHU for each floor or group
         ahu_id = 0
+        anchor = anchor or (5.0, 5.0)
+        bounds = bounds or {"width": 30.0, "depth": 25.0}
+        max_x = max(bounds.get("width", 30.0) - 3.5, 1.0)
+        max_y = max(bounds.get("depth", 25.0) - 2.5, 1.0)
+        base_x = max(min(anchor[0] - 1.5, max_x), 0.5)
+        base_y = max(min(anchor[1] - 1.0, max_y), 0.5)
+
         for floor, floor_zones in floors.items():
             total_cooling = sum(z.cooling_load for z in floor_zones)
             total_airflow = sum(z.supply_air for z in floor_zones) * 3.6  # m³/h
@@ -280,10 +294,28 @@ class HVACDesigner:
             max_ahu_capacity = 200000  # 200 kW max per AHU
             num_ahus = max(1, math.ceil(total_cooling / max_ahu_capacity))
 
+            slot_width = 3.4
+            row_spacing = 2.8
+            available_x = max(max_x - base_x, 0.0)
+            available_y = max(max_y - base_y, 0.0)
+            max_cols = max(1, int(available_x / slot_width) + 1)
+            max_rows = max(1, int(available_y / row_spacing) + 1)
+            max_units = max_cols * max_rows
+            num_ahus = min(num_ahus, max_units)
+            used_positions = set()
+
             for i in range(num_ahus):
+                row = i // max_cols
+                col = i % max_cols
+                loc_x = max(min(base_x + col * slot_width, max_x), 0.5)
+                loc_y = max(min(base_y + row * row_spacing, max_y), 0.5)
+                key = (round(loc_x, 2), round(loc_y, 2))
+                if key in used_positions:
+                    continue
+                used_positions.add(key)
                 ahus.append(AHU(
                     id=f"AHU_{floor}_{i}",
-                    location=(5.0, 5.0, floor * 3.6),  # Simplified location
+                    location=(loc_x, loc_y, floor * 3.6),
                     cooling_capacity=total_cooling / num_ahus / 1000,  # kW
                     airflow=total_airflow / num_ahus,
                     supply_pressure=500,  # Pa typical
@@ -298,11 +330,16 @@ class HVACDesigner:
         self,
         ahus: List[AHU],
         zones: List[ThermalZone],
-        grid: Dict
+        grid: Dict,
+        bounds: Optional[Dict[str, float]] = None,
     ) -> List[Duct]:
         """Design ductwork layout"""
         ducts = []
         duct_id = 0
+        bounds = bounds or {"width": 30.0, "depth": 25.0}
+        max_x = bounds.get("width", 30.0) - 1.0
+        max_y = bounds.get("depth", 25.0) - 1.0
+        grid_y = grid.get("grid_y") or []
 
         for ahu in ahus:
             # Main supply duct
@@ -316,11 +353,13 @@ class HVACDesigner:
             height = area / width
 
             # Main duct from AHU
+            end_x = min(ahu.location[0] + 20, max_x)
+            end_y = min(max(ahu.location[1], 0.5), max_y)
             main_duct = Duct(
                 id=f"D_main_{duct_id}",
                 type="supply",
                 start=ahu.location,
-                end=(ahu.location[0] + 20, ahu.location[1], ahu.location[2]),
+                end=(end_x, end_y, ahu.location[2]),
                 width=round(width, 2),
                 height=round(height, 2),
                 airflow=total_airflow,
@@ -332,7 +371,8 @@ class HVACDesigner:
 
             # Branch ducts to zones
             remaining_airflow = total_airflow
-            for zone in ahu_zones:
+            branch_limit = max(6, len(grid_y)) if grid_y else 6
+            for zone_index, zone in enumerate(ahu_zones[:branch_limit]):
                 zone_airflow = zone.supply_air * 3.6
 
                 # Size branch
@@ -340,12 +380,16 @@ class HVACDesigner:
                 branch_width = math.sqrt(branch_area * 1.5)
                 branch_height = branch_area / branch_width
 
-                bounds = zone.id  # Simplified - use zone center
+                if grid_y:
+                    target_y = grid_y[zone_index % len(grid_y)]
+                else:
+                    target_y = main_duct.end[1] + 3 + (zone_index % 4) * 2
+                branch_end_y = min(max(target_y, 0.5), max_y)
                 ducts.append(Duct(
                     id=f"D_branch_{duct_id}",
                     type="supply",
                     start=main_duct.end,
-                    end=(main_duct.end[0], main_duct.end[1] + 5, main_duct.end[2]),
+                    end=(main_duct.end[0], branch_end_y, main_duct.end[2]),
                     width=round(branch_width, 2),
                     height=round(branch_height, 2),
                     airflow=zone_airflow,
@@ -425,16 +469,18 @@ class ElectricalDesigner:
         self,
         loads: Dict,
         floors: int,
-        grid: Dict
+        grid: Dict,
+        anchor: Optional[Tuple[float, float]] = None,
     ) -> Dict[str, Any]:
         """Design electrical distribution system"""
         panels = []
+        anchor = anchor or (2.0, 2.0)
 
         # Main switchboard
         main_panel = ElectricalPanel(
             id="MSB",
             type="main",
-            location=(2.0, 2.0, 0),
+            location=(anchor[0], anchor[1], 0),
             capacity=loads["transformer_size"],
             voltage="415V",
             circuits=20
@@ -447,7 +493,7 @@ class ElectricalDesigner:
             panels.append(ElectricalPanel(
                 id=f"FDB_{floor}",
                 type="floor",
-                location=(2.0, 2.0, floor * 3.6),
+                location=(anchor[0], anchor[1], floor * 3.6),
                 capacity=load_per_floor * 1.2,
                 voltage="415V",
                 circuits=12
@@ -455,7 +501,7 @@ class ElectricalDesigner:
 
         return {
             "panels": [self._serialize_panel(p) for p in panels],
-            "cable_routes": self._design_cable_routes(panels, grid),
+            "cable_routes": self._design_cable_routes(panels, grid, anchor),
             "emergency_power": self._design_emergency(loads)
         }
 
@@ -469,16 +515,22 @@ class ElectricalDesigner:
             "circuits": panel.circuits
         }
 
-    def _design_cable_routes(self, panels: List, grid: Dict) -> List[Dict]:
+    def _design_cable_routes(
+        self,
+        panels: List,
+        grid: Dict,
+        anchor: Optional[Tuple[float, float]] = None,
+    ) -> List[Dict]:
         """Design cable tray routes"""
         routes = []
+        anchor = anchor or (2.0, 2.0)
 
         # Vertical riser
         routes.append({
             "id": "riser_main",
             "type": "vertical",
-            "start": {"x": 2.0, "y": 2.0, "z": 0},
-            "end": {"x": 2.0, "y": 2.0, "z": len(panels) * 3.6},
+            "start": {"x": anchor[0], "y": anchor[1], "z": 0},
+            "end": {"x": anchor[0], "y": anchor[1], "z": len(panels) * 3.6},
             "width": 0.3
         })
 
@@ -648,6 +700,29 @@ class MEPAgent(BaseDesignAgent):
         facades = arch_data.get("facades", {})
         floors = massing.get("floors", 10)
         floor_height = massing.get("floor_height", 3.6)
+        plan_core = None
+        if arch_data.get("floor_plans"):
+            plan_core = arch_data["floor_plans"][0].get("core")
+
+        core_position = None
+        core_bounds = None
+        if plan_core:
+            pos = plan_core.get("position") or [0, 0]
+            core_w = float(plan_core.get("width") or 0)
+            core_d = float(plan_core.get("depth") or 0)
+            try:
+                core_x = float(pos[0])
+                core_y = float(pos[1])
+            except (TypeError, ValueError, IndexError):
+                core_x = massing.get("width", 30) * 0.35
+                core_y = massing.get("depth", 25) * 0.35
+            core_bounds = {
+                "x": core_x,
+                "y": core_y,
+                "width": core_w,
+                "depth": core_d,
+            }
+            core_position = (core_x + core_w / 2, core_y + core_d / 2)
 
         region = self.context.get("region", "international")
         building_type = self.context.get("building_type", "office")
@@ -680,7 +755,15 @@ class MEPAgent(BaseDesignAgent):
                 "floor_area": massing.get("width", 30) * massing.get("depth", 25),
                 "region": region,
                 "building_type": building_type
-            }
+            },
+            "coordination": {
+                "core_position": core_position,
+                "core_bounds": core_bounds,
+                "building_bounds": {
+                    "width": massing.get("width", 30),
+                    "depth": massing.get("depth", 25),
+                },
+            },
         }
 
         self.log_decision(
@@ -697,6 +780,24 @@ class MEPAgent(BaseDesignAgent):
         zones = [self._deserialize_zone(z) for z in analysis["thermal_zones"]]
         params = analysis["building_params"]
         struct_constraints = analysis["structural_constraints"]
+        coordination = analysis.get("coordination", {})
+        bounds = coordination.get("building_bounds") or {
+            "width": math.sqrt(params["floor_area"]),
+            "depth": math.sqrt(params["floor_area"]),
+        }
+        core_bounds = coordination.get("core_bounds") or {}
+        core_position = coordination.get("core_position")
+
+        anchor_x = core_position[0] if core_position else bounds.get("width", 30) / 2
+        anchor_y = core_position[1] if core_position else bounds.get("depth", 25) / 2
+        if core_bounds:
+            anchor_x = core_bounds.get("x", anchor_x) + core_bounds.get("width", 0) + 1.5
+            anchor_y = core_bounds.get("y", anchor_y) + core_bounds.get("depth", 0) / 2
+            if anchor_x > bounds.get("width", 30) - 2.0:
+                anchor_x = core_bounds.get("x", anchor_x) - 1.5
+        anchor_x = max(min(anchor_x, bounds.get("width", 30) - 2.0), 0.5)
+        anchor_y = max(min(anchor_y, bounds.get("depth", 25) - 2.0), 0.5)
+        anchor = (anchor_x, anchor_y)
 
         # Design HVAC
         hvac_system = self.hvac_designer.select_system(
@@ -711,8 +812,10 @@ class MEPAgent(BaseDesignAgent):
             confidence=0.85
         )
 
-        ahus = self.hvac_designer.design_ahu(zones, hvac_system)
-        ductwork = self.hvac_designer.design_ductwork(ahus, zones, struct_constraints["grid"])
+        ahus = self.hvac_designer.design_ahu(zones, hvac_system, anchor=anchor, bounds=bounds)
+        ductwork = self.hvac_designer.design_ductwork(
+            ahus, zones, struct_constraints["grid"], bounds=bounds
+        )
 
         # Design Electrical
         electrical_loads = self.electrical_designer.calculate_loads(
@@ -723,7 +826,8 @@ class MEPAgent(BaseDesignAgent):
         electrical_distribution = self.electrical_designer.design_distribution(
             electrical_loads,
             params["floors"],
-            struct_constraints["grid"]
+            struct_constraints["grid"],
+            anchor=anchor,
         )
 
         # Design Plumbing
@@ -735,7 +839,7 @@ class MEPAgent(BaseDesignAgent):
         risers = self.plumbing_designer.design_risers(
             params["floors"],
             fixtures,
-            (params["floor_area"] ** 0.5 / 2, params["floor_area"] ** 0.5 / 2)
+            anchor,
         )
 
         # Check conflicts with structure

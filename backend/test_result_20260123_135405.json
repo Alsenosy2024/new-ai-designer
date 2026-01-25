@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "phase": "finalization",
+  "iterations": 1,
+  "convergence": false,
+  "agent_count": 4,
+  "resolved_conflicts": 0,
+  "unresolved_conflicts": 14
+}

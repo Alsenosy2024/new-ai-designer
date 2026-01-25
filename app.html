@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -23,20 +23,8 @@
             <span class="brand-subtitle">Autonomous BIM Design Platform</span>
           </div>
         </div>
-        <nav class="site-nav">
-          <a href="index.html#overview" data-i18n="nav.overview">Overview</a>
-          <a href="index.html#platform" data-i18n="nav.platform">Platform</a>
-          <a href="app.html" data-i18n="nav.console">Console</a>
-          <a href="index.html#agents" data-i18n="nav.agents">Agents</a>
-          <a href="index.html#workflow" data-i18n="nav.workflow">Workflow</a>
-          <a href="index.html#market" data-i18n="nav.market">Market</a>
-          <a href="proposal.html" data-i18n="nav.proposal">Full Proposal</a>
-        </nav>
         <div class="header-actions">
           <button class="btn ghost" type="button" data-lang-toggle>AR</button>
-          <a class="btn ghost" href="index.html#cta" data-i18n="action.request_demo"
-            >Request Demo</a
-          >
           <a class="btn primary" href="orchestrator.html" data-i18n="action.launch_run"
             >Launch Run</a
           >
@@ -53,8 +41,6 @@
             <a href="intake.html" data-i18n="sidebar.project_intake">Project Intake</a>
             <a href="orchestrator.html" data-i18n="sidebar.orchestrator">Orchestrator</a>
             <a href="outputs.html" data-i18n="sidebar.outputs">Outputs</a>
-            <a href="proposal.html" data-i18n="sidebar.proposal">Proposal</a>
-            <a href="index.html" data-i18n="sidebar.marketing_site">Marketing Site</a>
           </nav>
           <div class="sidebar-card">
             <p class="sidebar-label" data-i18n="sidebar.active_project">Active Project</p>
@@ -110,122 +96,8 @@
                     <td><span class="badge" data-status-badge data-bind="project.status">Running</span></td>
                     <td data-bind="project.nextRun">Structural re-optim</td>
                   </tr>
-                  <tr>
-                    <td>Abu Dhabi Civic Hub</td>
-                    <td>UAE</td>
-                    <td>
-                      <span class="badge muted" data-i18n="status.queued">Queued</span>
-                    </td>
-                    <td>MEP routing</td>
-                  </tr>
-                  <tr>
-                    <td>Doha Healthcare Campus</td>
-                    <td>Qatar</td>
-                    <td>
-                      <span class="badge warning" data-i18n="status.review">Review</span>
-                    </td>
-                    <td>Energy validation</td>
-                  </tr>
                 </tbody>
               </table>
-            </div>
-
-            <div class="panel" data-animate>
-              <h3 data-i18n="dashboard.agent_health">Agent Health</h3>
-              <div class="progress-stack">
-                <div>
-                  <div class="progress-label">
-                    <span data-i18n="agent.architectural">Architectural Agent</span>
-                    <span>92%</span>
-                  </div>
-                  <div class="progress"><span data-progress="92"></span></div>
-                </div>
-                <div>
-                  <div class="progress-label">
-                    <span data-i18n="agent.structural">Structural Agent</span>
-                    <span>88%</span>
-                  </div>
-                  <div class="progress"><span data-progress="88"></span></div>
-                </div>
-                <div>
-                  <div class="progress-label">
-                    <span data-i18n="agent.mep">MEP Agent</span>
-                    <span>81%</span>
-                  </div>
-                  <div class="progress"><span data-progress="81"></span></div>
-                </div>
-                <div>
-                  <div class="progress-label">
-                    <span data-i18n="agent.simulation">Simulation Agent</span>
-                    <span>96%</span>
-                  </div>
-                  <div class="progress"><span data-progress="96"></span></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="panel" data-animate>
-              <h3 data-i18n="dashboard.run_queue">Run Queue</h3>
-              <ul class="queue-list">
-                <li>
-                  <div>
-                    <p class="queue-title" data-bind="project.name">Riyadh Office Tower</p>
-                    <p class="queue-meta" data-bind="project.nextRun">Structural grid refinement</p>
-                  </div>
-                  <span class="badge" data-i18n="status.in_progress">In progress</span>
-                </li>
-                <li>
-                  <div>
-                    <p class="queue-title">Abu Dhabi Civic Hub</p>
-                    <p class="queue-meta">MEP riser coordination</p>
-                  </div>
-                  <span class="badge muted" data-i18n="status.queued">Queued</span>
-                </li>
-                <li>
-                  <div>
-                    <p class="queue-title">Doha Healthcare Campus</p>
-                    <p class="queue-meta">Code compliance review</p>
-                  </div>
-                  <span class="badge warning" data-i18n="status.needs_review"
-                    >Needs review</span
-                  >
-                </li>
-              </ul>
-            </div>
-
-            <div class="panel" data-animate>
-              <h3 data-i18n="dashboard.decision_board">Decision Board</h3>
-              <ul class="list">
-                <li data-i18n="dashboard.decision_1">
-                  Recommend shifting cores 1.8m east to reduce HVAC trunk.
-                </li>
-                <li data-i18n="dashboard.decision_2">
-                  Introduce secondary beam at Level 6 to reduce span.
-                </li>
-                <li data-i18n="dashboard.decision_3">
-                  Optimize glazing ratio for daylight compliance.
-                </li>
-                <li data-i18n="dashboard.decision_4">
-                  Schedule client review for revised massing.
-                </li>
-              </ul>
-            </div>
-          </section>
-
-          <section class="panel" data-animate>
-            <div class="panel-header">
-              <h3 data-i18n="dashboard.library_coverage">Knowledge Library Coverage</h3>
-              <a class="btn ghost" href="intake.html" data-i18n="dashboard.update_libraries"
-                >Update Libraries</a
-              >
-            </div>
-            <div class="tag-grid">
-              <span>Saudi SBC 2018</span>
-              <span>UAE Fire and Life Safety</span>
-              <span>ASHRAE 62.1</span>
-              <span>ASHRAE 90.1</span>
-              <span>IEC Electrical Standards</span>
-              <span>LEED v4.1</span>
             </div>
           </section>
         </div>

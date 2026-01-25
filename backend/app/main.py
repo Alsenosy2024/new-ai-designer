@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import BASE_DIR, CORS_ORIGINS, STORAGE_DIR
 from app.db import Base, engine
+from app.routes.auth import router as auth_router
 from app.routes.state import router as state_router
 
 Base.metadata.create_all(bind=engine)
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(state_router)
+app.include_router(auth_router)
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 app.mount("/files", StaticFiles(directory=STORAGE_DIR), name="files")

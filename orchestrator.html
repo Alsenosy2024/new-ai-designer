@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -23,20 +23,8 @@
             <span class="brand-subtitle">Autonomous BIM Design Platform</span>
           </div>
         </div>
-        <nav class="site-nav">
-          <a href="index.html#overview" data-i18n="nav.overview">Overview</a>
-          <a href="index.html#platform" data-i18n="nav.platform">Platform</a>
-          <a href="app.html" data-i18n="nav.console">Console</a>
-          <a href="index.html#agents" data-i18n="nav.agents">Agents</a>
-          <a href="index.html#workflow" data-i18n="nav.workflow">Workflow</a>
-          <a href="index.html#market" data-i18n="nav.market">Market</a>
-          <a href="proposal.html" data-i18n="nav.proposal">Full Proposal</a>
-        </nav>
         <div class="header-actions">
           <button class="btn ghost" type="button" data-lang-toggle>AR</button>
-          <a class="btn ghost" href="index.html#cta" data-i18n="action.request_demo"
-            >Request Demo</a
-          >
           <a class="btn primary" href="outputs.html" data-i18n="action.view_outputs"
             >View Outputs</a
           >
@@ -53,15 +41,12 @@
               >Orchestrator</a
             >
             <a href="outputs.html" data-i18n="sidebar.outputs">Outputs</a>
-            <a href="proposal.html" data-i18n="sidebar.proposal">Proposal</a>
-            <a href="index.html" data-i18n="sidebar.marketing_site">Marketing Site</a>
           </nav>
           <div class="sidebar-card">
             <p class="sidebar-label" data-i18n="sidebar.live_run">Live Run</p>
             <p class="sidebar-title" data-bind="run.id">Run 09A-RTX</p>
             <p class="sidebar-meta" data-bind="project.runMeta">Riyadh Office Tower | Schematic</p>
             <div class="chip-row">
-              <span class="badge">12 agents</span>
               <span class="badge muted" data-bind="run.conflicts">1 conflict</span>
             </div>
             <button class="btn ghost btn-block" data-run-orchestrator>
@@ -142,38 +127,6 @@
             <div class="panel" data-animate>
               <h3 data-i18n="orchestrator.decision_feed">Decision Feed</h3>
               <div class="log" data-decision-feed>
-                <p data-i18n="orchestrator.decision_1">
-                  09:24 - Architectural agent adjusted core offsets for daylight.
-                </p>
-                <p data-i18n="orchestrator.decision_2">
-                  09:31 - Structural agent flagged 12m span, requested beam depth increase.
-                </p>
-                <p data-i18n="orchestrator.decision_3">
-                  09:36 - MEP agent rerouted chilled water riser around shear wall.
-                </p>
-                <p data-i18n="orchestrator.decision_4">
-                  09:44 - Simulation agent raised egress clearance warning on Level 4.
-                </p>
-              </div>
-              <div class="decision-grid">
-                <div>
-                  <p class="queue-title" data-i18n="orchestrator.open_conflicts">Open Conflicts</p>
-                  <p class="queue-meta" data-i18n="orchestrator.pending_responses">
-                    2 pending responses
-                  </p>
-                </div>
-                <div>
-                  <p class="queue-title" data-i18n="orchestrator.iterations">Iterations</p>
-                  <p class="queue-meta" data-i18n="orchestrator.cycles_completed">
-                    3 cycles completed
-                  </p>
-                </div>
-                <div>
-                  <p class="queue-title" data-i18n="orchestrator.next_checkpoint">Next checkpoint</p>
-                  <p class="queue-meta" data-i18n="orchestrator.next_checkpoint_meta">
-                    Simulation rerun in 12 min
-                  </p>
-                </div>
               </div>
             </div>
           </section>

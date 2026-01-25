@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from app import models
-from app.config import STORAGE_DIR
+from app.config import GEMINI_API_KEY, GEMINI_MODEL, STORAGE_DIR
 from app.db import SessionLocal
 
 # Import agents
@@ -31,24 +31,24 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     """Simple LLM client wrapper for agents"""
 
-    def __init__(self, api_key: str = None, model: str = "gemini-1.5-pro"):
-        self.api_key = api_key
-        self.model = model
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
+        self.api_key = api_key or GEMINI_API_KEY
+        self.model = model or GEMINI_MODEL
 
     async def generate(self, prompt: str) -> str:
         """Generate response from LLM"""
         try:
-            from app.llm import _call_gemini
-            # Run sync function in async context
+            from app.llm import _gemini_request
+            # Run sync request in async context
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
-                _call_gemini,
+                _gemini_request,
                 prompt,
-                0.3,  # temperature
-                2048  # max_tokens
+                self.model,
+                self.api_key,
             )
-            return response
+            return response or "{}"
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             # Return empty JSON as fallback
@@ -91,16 +91,41 @@ class AgentDesignOrchestrator:
         self.storage_path = os.path.join(STORAGE_DIR, f"project_{project.id}")
         os.makedirs(self.storage_path, exist_ok=True)
 
+    def _parse_number(self, value: Any, fallback: float) -> float:
+        if value is None:
+            return fallback
+        if isinstance(value, (int, float)):
+            return float(value)
+        digits = "".join([char for char in str(value) if char.isdigit() or char == "."])
+        if not digits:
+            return fallback
+        try:
+            return float(digits)
+        except ValueError:
+            return fallback
+
+    def _parse_ratio(self, value: Any, fallback: float) -> float:
+        ratio = self._parse_number(value, fallback)
+        if ratio > 1:
+            ratio = ratio / 100
+        return max(0.05, min(0.4, ratio))
+
+    def _normalize_text(self, value: Any, fallback: str) -> str:
+        text = str(value or "").strip()
+        return text.lower() if text else fallback
+
     def _build_context(self) -> Dict[str, Any]:
         """Build project context from database model"""
+        gfa = self._parse_number(self.project.gfa, 10000)
+        floors = max(int(self._parse_number(self.project.floors, 10)), 1)
         return {
             "id": self.project.id,
             "name": self.project.name or "Untitled Project",
-            "region": self.project.region or "international",
-            "building_type": self.project.building_type or "office",
-            "gfa": self.project.gfa or 10000,
-            "floors": self.project.floors or 10,
-            "core_ratio": self.project.core_ratio or 0.12,
+            "region": self._normalize_text(self.project.region, "international"),
+            "building_type": self._normalize_text(self.project.building_type, "office"),
+            "gfa": gfa,
+            "floors": floors,
+            "core_ratio": self._parse_ratio(self.project.core_ratio, 0.12),
             "structural_system": self.project.structural_system,
             "mep_strategy": self.project.mep_strategy,
             "budget": self.project.budget or "standard",
@@ -130,9 +155,16 @@ class AgentDesignOrchestrator:
 
         self._log_event(run, "Initializing AI design agents...", "init", "info")
 
-        # Register agents
-        self._log_event(run, "Registering Architectural Agent", "init", "info")
-        arch_agent = ArchitecturalAgent(self.llm_client, self.context)
+        # Register agents - Use Enhanced Agent if available
+        try:
+            from app.agents.enhanced_architectural_agent import EnhancedArchitecturalAgent
+            self._log_event(run, "Registering Enhanced Architectural Agent (Gemini 2.0)", "init", "info")
+            arch_agent = EnhancedArchitecturalAgent(self.llm_client, self.context)
+            logger.info("Using Enhanced Architectural Agent with AI-powered space planning")
+        except ImportError:
+            self._log_event(run, "Registering Architectural Agent", "init", "info")
+            arch_agent = ArchitecturalAgent(self.llm_client, self.context)
+            logger.info("Using standard Architectural Agent")
         self.coordinator.register_agent(arch_agent)
 
         self._log_event(run, "Registering Structural Agent", "init", "info")
@@ -196,6 +228,35 @@ class AgentDesignOrchestrator:
             logger.error(f"Agent coordination failed: {e}")
             self._log_event(run, f"Agent error: {str(e)}", "coordination", "error")
             raise
+
+    async def run_architecture_only(self, run: models.Run) -> Dict[str, Any]:
+        """Run architecture-only pipeline for gated review."""
+        logger.info(f"Starting architecture-only design for project {self.project.id}")
+
+        self._log_event(run, "Initializing Architectural Agent...", "init", "info")
+        arch_agent = ArchitecturalAgent(self.llm_client, self.context)
+        self.coordinator.register_agent(arch_agent)
+
+        self._log_event(run, "Starting architectural coordination...", "coordination", "info")
+        result = await self.coordinator.run()
+
+        if result.success:
+            self._log_event(
+                run,
+                f"Architectural design completed in {result.iterations} iterations",
+                "coordination",
+                "info",
+            )
+            await self._save_outputs(run, result)
+            return result.final_design
+
+        self._log_event(
+            run,
+            f"Architectural coordination failed at phase: {result.phase.value}",
+            "coordination",
+            "error",
+        )
+        return {}
 
     async def _save_outputs(self, run: models.Run, result) -> None:
         """Save agent outputs to storage"""
@@ -431,7 +492,37 @@ async def run_agent_pipeline(project_id: int, run_id: int) -> Dict[str, Any]:
         db.close()
 
 
+async def run_architecture_pipeline(project_id: int, run_id: int) -> Dict[str, Any]:
+    """Architecture-only pipeline for gated approval."""
+    db = SessionLocal()
+    try:
+        project = db.query(models.Project).filter(models.Project.id == project_id).first()
+        run = db.query(models.Run).filter(models.Run.id == run_id).first()
+
+        if not project or not run:
+            raise ValueError(f"Project {project_id} or Run {run_id} not found")
+
+        orchestrator = AgentDesignOrchestrator(project, db)
+        design = await orchestrator.run_architecture_only(run)
+
+        return {
+            "design": design,
+            "massing": orchestrator.extract_massing(design),
+            "structural": {},
+            "mep": {},
+            "interior": {},
+            "summary": orchestrator.get_design_summary(design),
+        }
+    finally:
+        db.close()
+
+
 # Synchronous wrapper for existing pipeline integration
 def run_agent_pipeline_sync(project_id: int, run_id: int) -> Dict[str, Any]:
     """Synchronous wrapper for the async pipeline"""
     return asyncio.run(run_agent_pipeline(project_id, run_id))
+
+
+def run_architecture_pipeline_sync(project_id: int, run_id: int) -> Dict[str, Any]:
+    """Synchronous wrapper for the architecture-only pipeline"""
+    return asyncio.run(run_architecture_pipeline(project_id, run_id))

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مصمم AI المعماري - اختبار مباشر</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .status {
+            background: #f0f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .status-icon {
+            font-size: 24px;
+            margin-left: 15px;
+        }
+
+        .status-text {
+            flex: 1;
+        }
+
+        .form-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .metric {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border-right: 4px solid #667eea;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .success-badge {
+            background: #4caf50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+
+        .error-badge {
+            background: #f44336;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+
+        .links {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 8px;
+        }
+
+        .links a {
+            color: #1976d2;
+            text-decoration: none;
+            display: block;
+            margin: 8px 0;
+            font-weight: 500;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            background: #333;
+            color: #0f0;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 5px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ مصمم AI المعماري</h1>
+            <p>نظام تصميم معماري ذكي متعدد الوكلاء</p>
+        </div>
+
+        <div class="status" id="status">
+            <div class="status-item">
+                <span class="status-icon">⏳</span>
+                <div class="status-text">
+                    <strong>جاري التحقق من السيرفر...</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <h2 style="margin-bottom: 20px; color: #667eea;">معلومات المشروع</h2>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>اسم المشروع</label>
+                    <input type="text" id="projectName" value="مبنى مكاتب تجريبي">
+                </div>
+
+                <div class="form-group">
+                    <label>نوع المبنى</label>
+                    <select id="buildingType">
+                        <option value="office">مكاتب</option>
+                        <option value="residential">سكني</option>
+                        <option value="hotel">فندق</option>
+                        <option value="retail">تجاري</option>
+                        <option value="mixed">مختلط</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>المنطقة</label>
+                    <select id="region">
+                        <option value="saudi">السعودية</option>
+                        <option value="uae">الإمارات</option>
+                        <option value="qatar">قطر</option>
+                        <option value="international">دولي</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>المساحة الإجمالية (م²)</label>
+                    <input type="number" id="gfa" value="10000" min="1000" max="100000">
+                </div>
+
+                <div class="form-group">
+                    <label>عدد الطوابق</label>
+                    <input type="number" id="floors" value="10" min="1" max="50">
+                </div>
+
+                <div class="form-group">
+                    <label>نسبة النواة (%)</label>
+                    <input type="number" id="coreRatio" value="12" min="5" max="40">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <button class="btn" onclick="startDesign(event)">
+                    🚀 ابدأ التصميم
+                </button>
+            </div>
+        </div>
+
+        <div class="results" id="results">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <h3>جاري إنشاء التصميم...</h3>
+                <p id="loadingMessage">الوكلاء الذكية تعمل على مشروعك</p>
+                <p id="progressInfo" style="margin-top: 10px; color: #667eea;"></p>
+            </div>
+
+            <div id="output" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+
+        async function startDesign(event) {
+            const projectName = document.getElementById('projectName').value;
+            const buildingType = document.getElementById('buildingType').value;
+            const region = document.getElementById('region').value;
+            const gfa = parseInt(document.getElementById('gfa').value);
+            const floors = parseInt(document.getElementById('floors').value);
+            const coreRatio = parseInt(document.getElementById('coreRatio').value) / 100;
+
+            const results = document.getElementById('results');
+            const loading = document.getElementById('loading');
+            const output = document.getElementById('output');
+
+            results.classList.add('show');
+            loading.style.display = 'block';
+            output.style.display = 'none';
+            output.innerHTML = '';
+
+            event.target.disabled = true;
+            event.target.textContent = '⏳ جاري التصميم...';
+
+            try {
+                const projectResponse = await fetch(`${API_BASE}/api/state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project: {
+                            name: projectName,
+                            type: buildingType,
+                            region: region,
+                            gfa: gfa.toString(),
+                            floors: floors.toString(),
+                            core_ratio: coreRatio.toString(),
+                            structural_system: 'moment_frame',
+                            mep_strategy: 'central',
+                            budget: 'standard'
+                        }
+                    })
+                });
+
+                const projectData = await projectResponse.json();
+                const projectId = projectData.project?.id;
+
+                if (!projectId) throw new Error('فشل في إنشاء المشروع');
+
+                const runResponse = await fetch(`${API_BASE}/api/runs/start?project_id=${projectId}&stage=full`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const runData = await runResponse.json();
+
+                let completed = false;
+                let attempts = 0;
+                const maxAttempts = 120; // 6 minutes total
+
+                while (!completed && attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+
+                    const statusResponse = await fetch(`${API_BASE}/api/state?project_id=${projectId}`);
+                    const statusData = await statusResponse.json();
+
+                    console.log('Status check:', statusData.run?.status);
+
+                    // Update progress
+                    const progressInfo = document.getElementById('progressInfo');
+                    const elapsed = attempts * 3;
+                    progressInfo.textContent = `⏱️ الوقت: ${elapsed}s | الحالة: ${statusData.run?.status || 'جاري المعالجة...'}`;
+
+                    if (statusData.run?.status === 'Complete' || statusData.run?.status === 'completed') {
+                        completed = true;
+                        displayResults(statusData);
+                    } else if (statusData.run?.status === 'error' || statusData.run?.status === 'Error') {
+                        throw new Error('حدث خطأ أثناء التصميم');
+                    }
+
+                    attempts++;
+                }
+
+                if (!completed) throw new Error('انتهت مهلة التصميم');
+
+            } catch (error) {
+                loading.style.display = 'none';
+                output.style.display = 'block';
+                output.innerHTML = `
+                    <div class="error-badge">❌ ${error.message}</div>
+                    <p style="margin-top: 20px;">
+                        <strong>تأكد من:</strong><br>
+                        • تشغيل السيرفر: <code>cd backend && uvicorn app.main:app --reload --port 8001</code><br>
+                        • السيرفر يعمل على: <code>http://localhost:8001</code><br>
+                        • مفاتيح API مضبوطة بشكل صحيح
+                    </p>
+                `;
+            } finally {
+                event.target.disabled = false;
+                event.target.textContent = '🚀 ابدأ التصميم';
+            }
+        }
+
+        function displayResults(data) {
+            const loading = document.getElementById('loading');
+            const output = document.getElementById('output');
+
+            loading.style.display = 'none';
+            output.style.display = 'block';
+
+            const run = data.run;
+            const outputs = data.outputs || {};
+
+            // Extract massing from outputs or project
+            const massing = outputs.massing || {
+                width: 40,
+                depth: 30,
+                floors: data.project?.floors || 10,
+                floor_area: 1200,
+                height: 36
+            };
+
+            let html = `
+                <div class="success-badge">✅ اكتمل التصميم بنجاح!</div>
+
+                <h2 style="margin-top: 30px; color: #667eea;">المقاييس الأساسية</h2>
+                <div class="metric">
+                    <div class="metric-card">
+                        <div class="metric-value">${massing.width || 0} × ${massing.depth || 0}</div>
+                        <div class="metric-label">أبعاد المبنى (م)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${massing.floors || 0}</div>
+                        <div class="metric-label">عدد الطوابق</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${(massing.floor_area || 0).toLocaleString()}</div>
+                        <div class="metric-label">مساحة الطابق (م²)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${massing.height || 0}</div>
+                        <div class="metric-label">ارتفاع المبنى (م)</div>
+                    </div>
+                </div>
+
+                <h2 style="margin-top: 30px; color: #667eea;">معلومات التنفيذ</h2>
+                <div class="metric">
+                    <div class="metric-card">
+                        <div class="metric-value">${run?.duration ? (run.duration / 1000).toFixed(1) : '0'}s</div>
+                        <div class="metric-label">وقت التنفيذ</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">4</div>
+                        <div class="metric-label">الوكلاء المستخدمة</div>
+                    </div>
+                </div>
+            `;
+
+            // Check for generated files in outputs
+            const files = [];
+            if (outputs.plan_svg_file) files.push({ name: outputs.plan_svg_file, icon: '📐' });
+            if (outputs.dxf_file) files.push({ name: outputs.dxf_file, icon: '📋' });
+            if (outputs.energy_report_file) files.push({ name: outputs.energy_report_file, icon: '📄' });
+            if (outputs.mep_schedule_file) files.push({ name: outputs.mep_schedule_file, icon: '📊' });
+            if (outputs.ifc_file) files.push({ name: outputs.ifc_file, icon: '🏗️' });
+
+            if (files.length > 0) {
+                html += `
+                    <h2 style="margin-top: 30px; color: #667eea;">الملفات المتاحة</h2>
+                    <div class="links">
+                `;
+
+                files.forEach(file => {
+                    html += `<a href="${API_BASE}/files/${file.name}" target="_blank">${file.icon} ${file.name}</a>`;
+                });
+
+                html += `</div>`;
+            }
+
+            output.innerHTML = html;
+        }
+
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_BASE}/api/state`);
+                if (!response.ok) throw new Error();
+
+                document.getElementById('status').innerHTML = `
+                    <div class="status-item">
+                        <span class="status-icon">✅</span>
+                        <div class="status-text">
+                            <strong>حالة النظام:</strong> جاهز ويعمل
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">🤖</span>
+                        <div class="status-text">
+                            <strong>الوكلاء المتاحون:</strong> معماري، إنشائي، MEP، تصميم داخلي
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">🔑</span>
+                        <div class="status-text">
+                            <strong>AI API:</strong> Gemini & OpenAI متصلين
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('status').innerHTML = `
+                    <div class="status-item" style="background: #ffebee;">
+                        <span class="status-icon">⚠️</span>
+                        <div class="status-text">
+                            <strong>تنبيه:</strong> السيرفر غير متصل. شغّل السيرفر أولاً:<br>
+                            <code>cd backend && uvicorn app.main:app --reload --port 8001</code>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

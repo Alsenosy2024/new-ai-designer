@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "stitch": {
+      "command": "npx",
+      "args": ["-y", "@_davideast/stitch-mcp@latest", "proxy"],
+      "env": {
+        "GOOGLE_CLOUD_PROJECT": "ai-designer-stitch",
+        "GOOGLE_APPLICATION_CREDENTIALS": "/Users/senos/.config/gcloud/application_default_credentials.json"
+      }
+    }
+  }
+}
