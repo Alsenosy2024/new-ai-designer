@@ -308,9 +308,9 @@ python test_agents.py
 
 ### Priority 1 (Production-Ready)
 1. ✅ ~~Fix test script attribute access~~ - DONE
-2. Implement corridor width constraints
-3. Add structural optimization iteration
-4. Improve furniture collision detection
+2. ✅ ~~Implement corridor width constraints~~ - DONE
+3. ✅ ~~Add structural optimization iteration~~ - DONE
+4. ✅ ~~Improve furniture collision detection~~ - DONE
 
 ### Priority 2 (Enhanced Features)
 1. Complete IFC export with full geometry

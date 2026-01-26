@@ -1661,7 +1661,7 @@ class FloorPlanGenerator:
             secondary = {
                 "id": f"corridor_secondary_{plan.floor_level}_{i}",
                 "type": "secondary_corridor",
-                "width": corridor_width * 0.8,
+                "width": max(corridor_width * 0.8, 1.5),
                 "path": [
                     {"x": grid_x, "y": 0},
                     {"x": grid_x, "y": plan.depth}

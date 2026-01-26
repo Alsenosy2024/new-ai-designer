@@ -620,7 +620,7 @@ body::after {
 
 .plan-canvas {
   width: 100%;
-  height: clamp(550px, 80vh, 900px);
+  height: clamp(650px, 85vh, 1200px);
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.8);
@@ -681,7 +681,7 @@ body::after {
 
 .model-canvas {
   width: 100%;
-  height: clamp(380px, 50vh, 560px);
+  height: clamp(500px, 60vh, 900px);
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.8);

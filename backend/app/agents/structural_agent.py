@@ -361,10 +361,10 @@ class LoadCalculator:
         seismic_force = seismic_coefficient * building_weight
 
         # Distribute to floors
+        denom = sum(range(1, floors + 1))
         floor_forces = []
         for i in range(floors):
-            h = (i + 1) * (height / floors)
-            factor = h / sum(range(1, floors + 1))
+            factor = (i + 1) / denom
             floor_forces.append({
                 "level": i,
                 "wind": wind_force * factor,
@@ -610,7 +610,8 @@ class StructuralAnalyzer:
     def analyze_drift(
         self,
         model: StructuralModel,
-        lateral_loads: Dict[str, Any]
+        lateral_loads: Dict[str, Any],
+        stiffness_multiplier: float = 1.0
     ) -> Dict[str, float]:
         """Analyze inter-story drift"""
         floors = len(model.slabs)
@@ -623,6 +624,8 @@ class StructuralAnalyzer:
             stiffness_factor = 1.2
         else:
             stiffness_factor = 1.0
+            
+        stiffness_factor *= stiffness_multiplier
 
         # Calculate drift per floor
         drifts = []
@@ -819,12 +822,35 @@ class StructuralAgent(BaseDesignAgent):
             foundations=self._design_foundations(columns, loads)
         )
 
-        # Analyze drift
-        drift_results = self.analyzer.analyze_drift(model, loads["lateral"])
-        model.max_drift = drift_results["max_drift"]
-        model.period = self.analyzer.analyze_period(
-            geometry["height"], system
-        )
+        # Iterative design for drift optimization
+        max_iterations = 3
+        stiffness_multiplier = 1.0
+        
+        for iteration in range(max_iterations):
+            # Analyze drift with current stiffness
+            drift_results = self.analyzer.analyze_drift(model, loads["lateral"], stiffness_multiplier)
+            model.max_drift = drift_results["max_drift"]
+            model.period = self.analyzer.analyze_period(
+                geometry["height"], system
+            )
+            
+            # Check compliance
+            if drift_results["max_drift_ratio"] <= 0.015:
+                logger.info(f"[Structural] Drift check passed on iteration {iteration + 1}")
+                break
+                
+            logger.info(f"[Structural] Drift ratio {drift_results['max_drift_ratio']:.4f} exceeds limit. Optimizing (Iter {iteration + 1})...")
+            
+            # Increase stiffness for next iteration (simulate larger members)
+            stiffness_multiplier *= 1.3
+            
+            # Update member sizes in model to reflect increased stiffness
+            for col in model.columns:
+                col.width *= 1.1
+                col.depth *= 1.1
+            for beam in model.beams:
+                beam.width *= 1.1
+                beam.depth *= 1.1
 
         # Check for conflicts with architecture
         self._check_conflicts(analysis, model)
