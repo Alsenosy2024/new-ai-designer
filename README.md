@@ -15,19 +15,20 @@
 - **AI**: Gemini 2.0 Flash + MCP
 - **3D**: Three.js + React Three Fiber
 
-### النشر على Vercel:
+### 🚀 النشر (Deployment):
 
-#### Frontend:
-```bash
-cd frontend
-vercel --prod
-```
+#### خيارات النشر المتاحة:
 
-#### Backend:
-```bash
-cd backend
-vercel --prod
-```
+##### 1. AWS (موصى به - Free Tier 12 شهر):
+- ✅ **Backend**: AWS Elastic Beanstalk
+- ✅ **Frontend**: AWS Amplify
+- 📚 **دليل النشر**: اقرأ `QUICK_START_AWS.md` أو `AWS_DEPLOYMENT.md`
+- 📦 **ملف جاهز**: `backend-aws-deploy.zip`
+
+##### 2. Netlify + Railway:
+- ✅ **Backend**: Railway
+- ✅ **Frontend**: Netlify
+- 📄 **التكوين**: `netlify.toml`, `railway.json`, `Procfile`
 
 ### Environment Variables:
 
@@ -38,7 +39,9 @@ vercel --prod
 
 #### Backend:
 - `GEMINI_API_KEY`: Google Gemini API Key
+- `GEMINI_MODEL`: gemini-1.5-pro
 - `CORS_ORIGINS`: Allowed origins
+- `DATABASE_URL`: sqlite:///app.db
 
 ### التطوير المحلي:
 
@@ -54,9 +57,14 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8001
 ```
 
-### الرابط المباشر:
-- Frontend: https://ai-designer-frontend.vercel.app
-- Backend: https://ai-designer-backend.vercel.app
+### 📁 الملفات المهمة:
+
+- `QUICK_START_AWS.md` - دليل نشر سريع على AWS
+- `AWS_DEPLOYMENT.md` - دليل تفصيلي للنشر على AWS
+- `backend-aws-deploy.zip` - ملف جاهز للرفع على Elastic Beanstalk
+- `netlify.toml` - تكوين Netlify
+- `backend/railway.json` - تكوين Railway
+- `frontend/amplify.yml` - تكوين AWS Amplify
 
 ---
 Made with ❤️ using Gemini AI
