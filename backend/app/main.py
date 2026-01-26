@@ -27,6 +27,13 @@ app.add_middleware(
 app.include_router(state_router)
 app.include_router(auth_router)
 
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Railway deployment"""
+    return {"status": "healthy", "service": "AI Designer API"}
+
+
 os.makedirs(STORAGE_DIR, exist_ok=True)
 app.mount("/files", StaticFiles(directory=STORAGE_DIR), name="files")
 

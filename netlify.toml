@@ -1,16 +1,12 @@
 [build]
-  publish = "frontend"
-  functions = "netlify/functions"
-
-[functions]
-  directory = "netlify/functions"
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
+  base = "frontend"
+  command = "npm run build"
+  publish = "frontend/dist"
 
 [[redirects]]
   from = "/*"
-  to = "/evaluate.html"
+  to = "/index.html"
   status = 200
+
+[build.environment]
+  NODE_VERSION = "18"
