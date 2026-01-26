@@ -23,8 +23,16 @@ const planCoordsLabel = document.querySelector("[data-cad-coords]");
 const modelCanvas = document.getElementById("model-view");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-const API_BASES = ["", "http://localhost:8001"];
-let activeApiBase = window.aiDesignerApiBase || "";
+const apiBaseMeta = document.querySelector('meta[name="ai-designer-api-base"]');
+const apiBaseOverride =
+  window.aiDesignerApiBase ||
+  (apiBaseMeta ? apiBaseMeta.getAttribute("content") : "");
+const API_BASES = [apiBaseOverride, "", "http://localhost:8001"].filter(Boolean);
+let activeApiBase = apiBaseOverride || "";
+
+if (apiBaseOverride) {
+  window.aiDesignerApiBase = apiBaseOverride;
+}
 const MAX_PIXEL_RATIO = 1.5;
 const TARGET_FPS = 30;
 const ROTATION_SPEED = 0.002;
@@ -1100,19 +1108,113 @@ async function renderPlan(state) {
     }
   }
   const { width, depth } = computeMassing(state);
-  console.log("Fallback to massing generation.");
-  const coreWidth = width * 0.3;
-  const coreDepth = depth * 0.4;
-  const coreX = (width - coreWidth) / 2;
-  const coreY = (depth - coreDepth) / 2;
+  console.log("Fallback to detailed plan generation.");
+
+  // Padding for grid and dimensions
+  const padding = 4;
+  const viewWidth = width + padding * 2;
+  const viewHeight = depth + padding * 2;
+  const originX = padding;
+  const originY = padding;
+
+  const coreWidth = width * 0.25;
+  const coreDepth = depth * 0.3;
+  const coreX = originX + (width - coreWidth) / 2;
+  const coreY = originY + (depth - coreDepth) / 2;
+
+  // Grid lines
+  let gridSvg = "";
+  const gridStep = 8;
+  const cols = Math.floor(width / gridStep);
+  const rows = Math.floor(depth / gridStep);
+
+  // Vertical Grid (A, B, C...)
+  for (let i = 0; i <= cols; i++) {
+    const x = originX + (i * width) / cols;
+    const label = String.fromCharCode(65 + i);
+    gridSvg += `<line x1="${x}" y1="${originY - 1.5}" x2="${x}" y2="${originY + depth + 1.5}" stroke="#b0bec5" stroke-dasharray="0.3 0.2" stroke-width="0.05" />`;
+    gridSvg += `<circle cx="${x}" cy="${originY - 2}" r="0.6" fill="none" stroke="#546e7a" stroke-width="0.1" />`;
+    gridSvg += `<text x="${x}" y="${originY - 1.8}" font-size="0.6" text-anchor="middle" fill="#546e7a">${label}</text>`;
+  }
+
+  // Horizontal Grid (1, 2, 3...)
+  for (let i = 0; i <= rows; i++) {
+    const y = originY + (i * depth) / rows;
+    const label = i + 1;
+    gridSvg += `<line x1="${originX - 1.5}" y1="${y}" x2="${originX + width + 1.5}" y2="${y}" stroke="#b0bec5" stroke-dasharray="0.3 0.2" stroke-width="0.05" />`;
+    gridSvg += `<circle cx="${originX - 2}" cy="${y}" r="0.6" fill="none" stroke="#546e7a" stroke-width="0.1" />`;
+    gridSvg += `<text x="${originX - 2}" y="${y + 0.2}" font-size="0.6" text-anchor="middle" fill="#546e7a">${label}</text>`;
+  }
+
+  // Dimensions
+  let dimSvg = "";
+  // Top Width
+  dimSvg += `<line x1="${originX}" y1="${originY - 1}" x2="${originX + width}" y2="${originY - 1}" stroke="#546e7a" stroke-width="0.05" />`;
+  dimSvg += `<line x1="${originX}" y1="${originY - 0.8}" x2="${originX}" y2="${originY - 1.2}" stroke="#546e7a" stroke-width="0.05" />`;
+  dimSvg += `<line x1="${originX + width}" y1="${originY - 0.8}" x2="${originX + width}" y2="${originY - 1.2}" stroke="#546e7a" stroke-width="0.05" />`;
+  dimSvg += `<text x="${originX + width / 2}" y="${originY - 1.2}" font-size="0.6" text-anchor="middle" fill="#546e7a">${width.toFixed(1)}m</text>`;
+
+  // Left Depth
+  dimSvg += `<line x1="${originX - 1}" y1="${originY}" x2="${originX - 1}" y2="${originY + depth}" stroke="#546e7a" stroke-width="0.05" />`;
+  dimSvg += `<line x1="${originX - 0.8}" y1="${originY}" x2="${originX - 1.2}" y2="${originY}" stroke="#546e7a" stroke-width="0.05" />`;
+  dimSvg += `<line x1="${originX - 0.8}" y1="${originY + depth}" x2="${originX - 1.2}" y2="${originY + depth}" stroke="#546e7a" stroke-width="0.05" />`;
+  dimSvg += `<text x="${originX - 1.2}" y="${originY + depth / 2}" font-size="0.6" text-anchor="end" fill="#546e7a">${depth.toFixed(1)}m</text>`;
+
+  // Rooms and Layout
+  const mainWalls = `<rect x="${originX}" y="${originY}" width="${width}" height="${depth}" fill="#fcfbf9" stroke="#37474f" stroke-width="0.4" />`;
+  const core = `<rect x="${coreX}" y="${coreY}" width="${coreWidth}" height="${coreDepth}" fill="#eceff1" stroke="#546e7a" stroke-width="0.2" />`;
+
+  // Internal partitions (simplified)
+  let partitions = "";
+  // Vertical split
+  partitions += `<line x1="${originX + width * 0.3}" y1="${originY}" x2="${originX + width * 0.3}" y2="${originY + depth}" stroke="#78909c" stroke-width="0.15" />`;
+  partitions += `<line x1="${originX + width * 0.7}" y1="${originY}" x2="${originX + width * 0.7}" y2="${originY + depth}" stroke="#78909c" stroke-width="0.15" />`;
+  // Horizontal split
+  partitions += `<line x1="${originX}" y1="${originY + depth * 0.5}" x2="${originX + width}" y2="${originY + depth * 0.5}" stroke="#78909c" stroke-width="0.15" />`;
+
+  // Doors
+  let doors = "";
+  // Main Entrance
+  doors += `<path d="M${originX + width / 2 - 0.8} ${originY + depth} L${originX + width / 2 - 0.8} ${originY + depth + 0.8} A0.8 0.8 0 0 1 ${originX + width / 2} ${originY + depth}" fill="none" stroke="#37474f" stroke-width="0.1" />`;
+  doors += `<line x1="${originX + width / 2 - 0.8}" y1="${originY + depth}" x2="${originX + width / 2 - 0.8}" y2="${originY + depth + 0.8}" stroke="#37474f" stroke-width="0.1" />`;
+
+  // Core Door
+  doors += `<path d="M${coreX + coreWidth / 2} ${coreY + coreDepth} L${coreX + coreWidth / 2} ${coreY + coreDepth + 0.6} A0.6 0.6 0 0 1 ${coreX + coreWidth / 2 + 0.6} ${coreY + coreDepth}" fill="none" stroke="#546e7a" stroke-width="0.1" />`;
+
+  // Windows
+  let windows = "";
+  const winW = 1.5;
+  const numWinsX = Math.floor(width / 4);
+  for (let i = 1; i < numWinsX; i++) {
+    const wx = originX + i * (width / numWinsX) - winW / 2;
+    windows += `<rect x="${wx}" y="${originY - 0.2}" width="${winW}" height="0.4" fill="#ffffff" stroke="#90a4ae" stroke-width="0.1" />`; // Top
+    windows += `<line x1="${wx}" y1="${originY}" x2="${wx + winW}" y2="${originY}" stroke="#cfd8dc" stroke-width="0.15" />`;
+
+    windows += `<rect x="${wx}" y="${originY + depth - 0.2}" width="${winW}" height="0.4" fill="#ffffff" stroke="#90a4ae" stroke-width="0.1" />`; // Bottom
+    windows += `<line x1="${wx}" y1="${originY + depth}" x2="${wx + winW}" y2="${originY + depth}" stroke="#cfd8dc" stroke-width="0.15" />`;
+  }
 
   container.innerHTML = `
-    <svg viewBox="0 0 ${width} ${depth}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-      <rect x="0.5" y="0.5" width="${width - 1}" height="${depth - 1}" fill="#fbf6ef" stroke="#c7b8a8" stroke-width="0.6" />
-      <rect x="${coreX}" y="${coreY}" width="${coreWidth}" height="${coreDepth}" fill="#e6d9cb" stroke="#b8a897" stroke-width="0.5" />
-      <line x1="${width * 0.25}" y1="1" x2="${width * 0.25}" y2="${depth - 1}" stroke="#e0d2c2" stroke-width="0.4" />
-      <line x1="${width * 0.5}" y1="1" x2="${width * 0.5}" y2="${depth - 1}" stroke="#e0d2c2" stroke-width="0.4" />
-      <line x1="${width * 0.75}" y1="1" x2="${width * 0.75}" y2="${depth - 1}" stroke="#e0d2c2" stroke-width="0.4" />
+    <svg viewBox="0 0 ${viewWidth} ${viewHeight}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <!-- Grid -->
+      <g class="layer-axes">${gridSvg}</g>
+      
+      <!-- Dimensions -->
+      <g class="layer-dims">${dimSvg}</g>
+      
+      <!-- Walls & Core -->
+      <g class="layer-arch">
+        ${mainWalls}
+        ${partitions}
+        ${core}
+        ${windows}
+        ${doors}
+      </g>
+      
+      <!-- Labels -->
+      <g class="layer-legend">
+        <text x="${coreX + coreWidth / 2}" y="${coreY + coreDepth / 2}" font-size="0.8" text-anchor="middle" fill="#546e7a">CORE</text>
+      </g>
     </svg>
   `;
   registerPlanSvg();

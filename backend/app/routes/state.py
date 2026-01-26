@@ -17,7 +17,15 @@ router = APIRouter(prefix="/api", tags=["state"])
 def read_state(db: Session = Depends(get_db)):
     project, run, output = get_latest_state(db)
     if not project:
-        raise HTTPException(status_code=404, detail="No project found")
+        project = models.Project(
+            name="New Project",
+            status="Draft",
+            next_run="Awaiting launch",
+        )
+        db.add(project)
+        db.commit()
+        db.refresh(project)
+        return schemas.StateResponse(project=project, run=None, outputs=None)
     return schemas.StateResponse(project=project, run=run, outputs=output)
 
 

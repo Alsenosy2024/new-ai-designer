@@ -7,7 +7,16 @@ import type {
   Run,
 } from "@/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+const runtimeApiBase =
+  typeof window !== "undefined"
+    ? (window as Window & { aiDesignerApiBase?: string }).aiDesignerApiBase
+    : undefined;
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  runtimeApiBase ||
+  (typeof window !== "undefined" ? window.location.origin : "") ||
+  "http://localhost:8001";
 
 // Demo mode flag - set to true when backend is unavailable
 let demoMode = false;

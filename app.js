@@ -14,8 +14,16 @@ const observer = new IntersectionObserver(
 animatedItems.forEach((item) => observer.observe(item));
 
 const STATE_KEY = "aiDesignerState";
-const API_BASES = ["", "http://localhost:8001"];
-let activeApiBase = "";
+const apiBaseMeta = document.querySelector('meta[name="ai-designer-api-base"]');
+const apiBaseOverride =
+  window.aiDesignerApiBase ||
+  (apiBaseMeta ? apiBaseMeta.getAttribute("content") : "");
+const API_BASES = [apiBaseOverride, "", "http://localhost:8001"].filter(Boolean);
+let activeApiBase = apiBaseOverride || "";
+
+if (apiBaseOverride) {
+  window.aiDesignerApiBase = apiBaseOverride;
+}
 
 function setActiveApiBase(base) {
   activeApiBase = base;

@@ -1,6 +1,10 @@
 const GEMINI_DESIGN_API_KEY = import.meta.env.VITE_GEMINI_DESIGN_API_KEY || 'gd_H-xso1nO5IgOfVvTDknD_XCmQfxmsJXi';
 const GEMINI_DESIGN_MCP_URL = import.meta.env.VITE_GEMINI_DESIGN_MCP_URL || 'https://gemini-design-mcp-server-production.up.railway.app/mcp';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.aiDesignerApiBase) ||
+  (typeof window !== 'undefined' ? window.location.origin : '') ||
+  'http://localhost:8001';
 
 class GeminiDesignMCP {
   constructor() {

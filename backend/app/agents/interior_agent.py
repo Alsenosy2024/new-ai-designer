@@ -309,7 +309,7 @@ class FurniturePlanner:
                 count = 1
 
             for i in range(count):
-                # Check if fits
+                # Check if fits within space bounds
                 if current_x + dims[0] + clearance[1] > origin_x + width:
                     current_x = origin_x + 1.0
                     current_y += dims[1] + clearance[0] + 1.5
@@ -317,15 +317,36 @@ class FurniturePlanner:
                 if current_y + dims[1] > origin_y + depth:
                     break
 
-                furniture.append(FurnitureItem(
-                    id=f"{space.get('id', 'space')}_{furniture_type}_{i}",
-                    type=furniture_type,
-                    position=(current_x, current_y),
-                    rotation=0,
-                    dimensions=dims,
-                    floor_level=space.get("floor_level", 0),
-                    space_id=space.get("id", "")
-                ))
+                # Collision detection against existing furniture
+                new_item_bounds = (
+                    current_x - clearance[1], 
+                    current_y - clearance[0],
+                    current_x + dims[0] + clearance[1], 
+                    current_y + dims[1] + clearance[0]
+                )
+                
+                collision = False
+                for existing in furniture:
+                    ex_dims = existing.dimensions
+                    ex_pos = existing.position
+                    # Simple AABB collision check
+                    if (new_item_bounds[0] < ex_pos[0] + ex_dims[0] and 
+                        new_item_bounds[2] > ex_pos[0] and
+                        new_item_bounds[1] < ex_pos[1] + ex_dims[1] and 
+                        new_item_bounds[3] > ex_pos[1]):
+                        collision = True
+                        break
+                
+                if not collision:
+                    furniture.append(FurnitureItem(
+                        id=f"{space.get('id', 'space')}_{furniture_type}_{i}",
+                        type=furniture_type,
+                        position=(current_x, current_y),
+                        rotation=0,
+                        dimensions=dims,
+                        floor_level=space.get("floor_level", 0),
+                        space_id=space.get("id", "")
+                    ))
 
                 current_x += dims[0] + clearance[1] + 0.5
 
@@ -341,15 +362,35 @@ class FurniturePlanner:
             pos_x = origin_x + width - dims[0] - 0.3
             pos_y = origin_y + 0.3
 
-            furniture.append(FurnitureItem(
-                id=f"{space.get('id', 'space')}_{furniture_type}_accent",
-                type=furniture_type,
-                position=(pos_x, pos_y),
-                rotation=0,
-                dimensions=dims,
-                floor_level=space.get("floor_level", 0),
-                space_id=space.get("id", "")
-            ))
+            # Collision detection for accent furniture
+            new_item_bounds = (
+                pos_x,
+                pos_y,
+                pos_x + dims[0],
+                pos_y + dims[1]
+            )
+            
+            collision = False
+            for existing in furniture:
+                ex_dims = existing.dimensions
+                ex_pos = existing.position
+                if (new_item_bounds[0] < ex_pos[0] + ex_dims[0] and 
+                    new_item_bounds[2] > ex_pos[0] and
+                    new_item_bounds[1] < ex_pos[1] + ex_dims[1] and 
+                    new_item_bounds[3] > ex_pos[1]):
+                    collision = True
+                    break
+
+            if not collision:
+                furniture.append(FurnitureItem(
+                    id=f"{space.get('id', 'space')}_{furniture_type}_accent",
+                    type=furniture_type,
+                    position=(pos_x, pos_y),
+                    rotation=0,
+                    dimensions=dims,
+                    floor_level=space.get("floor_level", 0),
+                    space_id=space.get("id", "")
+                ))
 
         return furniture
 
