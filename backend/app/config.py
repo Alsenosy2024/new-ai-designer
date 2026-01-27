@@ -34,7 +34,39 @@ _load_env()
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
-STORAGE_DIR = os.getenv("STORAGE_DIR", os.path.join(BASE_DIR, "storage"))
+
+
+def _is_writable_dir(path: str) -> bool:
+    try:
+        os.makedirs(path, exist_ok=True)
+        probe = os.path.join(path, ".write_probe")
+        with open(probe, "w", encoding="utf-8") as handle:
+            handle.write("ok")
+        os.remove(probe)
+        return True
+    except OSError:
+        return False
+
+
+def _resolve_storage_dir() -> str:
+    configured = os.getenv("STORAGE_DIR", "").strip()
+    if configured:
+        try:
+            os.makedirs(configured, exist_ok=True)
+            return configured
+        except OSError:
+            pass
+
+    default_dir = os.path.join(BASE_DIR, "storage")
+    if _is_writable_dir(default_dir):
+        return default_dir
+
+    fallback_dir = os.path.join("/tmp", "ai-designer-storage")
+    os.makedirs(fallback_dir, exist_ok=True)
+    return fallback_dir
+
+
+STORAGE_DIR = _resolve_storage_dir()
 
 DEFAULT_FLOOR_HEIGHT = float(os.getenv("DEFAULT_FLOOR_HEIGHT", "3.3"))
 

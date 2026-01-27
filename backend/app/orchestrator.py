@@ -4,6 +4,7 @@ import os
 import shutil
 import sqlite3
 import subprocess
+import traceback
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
@@ -873,6 +874,10 @@ def run_pipeline(run_id: str, stage: str = "full") -> None:
                 run.conflicts = "Check logs"
                 db.commit()
                 _log_event(db, run, f"Run failed: {exc}", step="error", level="error")
+                trace_lines = traceback.format_exc().strip().splitlines()
+                if trace_lines:
+                    snippet = "\n".join(trace_lines[-8:])
+                    _log_event(db, run, snippet, step="error", level="error")
         finally:
             pass
     finally:

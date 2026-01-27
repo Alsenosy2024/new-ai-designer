@@ -4,7 +4,7 @@ import os
 import struct
 import zipfile
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -174,9 +174,22 @@ def _build_plan_svg(project: models.Project, massing: Optional[dict] = None) -> 
     )
 
 
-def _coerce_float_list(values: Optional[list]) -> list[float]:
+def _coerce_float_list(values: Optional[Any]) -> list[float]:
+    if values is None or isinstance(values, (int, float, bool)):
+        return []
+
+    if isinstance(values, str):
+        if "," not in values:
+            return []
+        values_iter = [part.strip() for part in values.split(",")]
+    else:
+        try:
+            values_iter = list(values)
+        except TypeError:
+            return []
+
     result = []
-    for value in values or []:
+    for value in values_iter:
         try:
             result.append(float(value))
         except (TypeError, ValueError):
