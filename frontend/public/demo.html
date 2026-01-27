@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="ai-designer-api-base" content="https://ai-designer-env.eba-dfn2vam3.us-east-1.elasticbeanstalk.com" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تجربة سريعة - مصمم AI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.loading { background: #d1ecf1; color: #0c5460; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 20px;
+            direction: ltr;
+            text-align: left;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ تجربة سريعة - مصمم AI</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+            اختبار النظام الأساسي بدون تشغيل الوكلاء
+        </p>
+
+        <div class="status success" id="status">
+            ⏳ جاري التحقق من الاتصال...
+        </div>
+
+        <div class="form-group">
+            <label>اسم المشروع</label>
+            <input type="text" id="name" value="مشروع تجريبي">
+        </div>
+
+        <div class="form-group">
+            <label>نوع المبنى</label>
+            <select id="type">
+                <option value="office">مكاتب</option>
+                <option value="residential">سكني</option>
+                <option value="hotel">فندق</option>
+                <option value="retail">تجاري</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>المنطقة</label>
+            <select id="region">
+                <option value="saudi">السعودية</option>
+                <option value="uae">الإمارات</option>
+                <option value="qatar">قطر</option>
+            </select>
+        </div>
+
+        <button class="btn" onclick="testAPI()">إنشاء مشروع (بدون تصميم)</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+
+        // Check connection on load
+        window.addEventListener('load', async () => {
+            const status = document.getElementById('status');
+            try {
+                const response = await fetch(`${API_BASE}/api/state`);
+                if (response.ok) {
+                    status.className = 'status success';
+                    status.textContent = '✅ السيرفر متصل وجاهز';
+                } else {
+                    throw new Error();
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.innerHTML = '❌ السيرفر غير متصل<br>شغّل: cd backend && uvicorn app.main:app --reload --port 8001';
+            }
+        });
+
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            const status = document.getElementById('status');
+
+            status.className = 'status loading';
+            status.textContent = '⏳ جاري إنشاء المشروع...';
+            resultDiv.innerHTML = '';
+
+            const name = document.getElementById('name').value;
+            const type = document.getElementById('type').value;
+            const region = document.getElementById('region').value;
+
+            try {
+                // Step 1: Create project
+                console.log('Sending request...');
+                const response = await fetch(`${API_BASE}/api/state`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        project: {
+                            name: name,
+                            type: type,
+                            region: region,
+                            gfa: '10000',
+                            floors: '10',
+                            core_ratio: '0.12',
+                            structural_system: 'moment_frame',
+                            mep_strategy: 'central',
+                            budget: 'standard'
+                        }
+                    })
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (!data.project?.id) {
+                    throw new Error('لم يتم إرجاع ID المشروع');
+                }
+
+                // Success!
+                status.className = 'status success';
+                status.textContent = '✅ تم إنشاء المشروع بنجاح!';
+
+                resultDiv.innerHTML = `
+                    <h3 style="color: #667eea; margin-top: 20px;">معلومات المشروع:</h3>
+                    <pre>${JSON.stringify(data.project, null, 2)}</pre>
+
+                    <div style="margin-top: 20px; padding: 15px; background: #e7f3ff; border-radius: 8px;">
+                        <strong>Project ID:</strong> ${data.project.id}<br>
+                        <strong>الاسم:</strong> ${data.project.name}<br>
+                        <strong>النوع:</strong> ${data.project.building_type}<br>
+                        <strong>المنطقة:</strong> ${data.project.region}<br>
+                        <strong>المساحة:</strong> ${data.project.gfa} م²<br>
+                        <strong>الطوابق:</strong> ${data.project.floors}
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                        <strong>✨ النظام الأساسي يعمل!</strong><br>
+                        لتشغيل التصميم الكامل بالوكلاء، استخدم:<br>
+                        <code style="display: block; margin-top: 10px; padding: 10px; background: #333; color: #0f0; border-radius: 4px;">
+                        cd backend && python test_agents.py
+                        </code>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error:', error);
+                status.className = 'status error';
+                status.textContent = '❌ حدث خطأ';
+
+                resultDiv.innerHTML = `
+                    <div style="margin-top: 20px; padding: 15px; background: #f8d7da; border-radius: 8px; color: #721c24;">
+                        <strong>الخطأ:</strong> ${error.message}<br><br>
+                        <strong>تحقق من:</strong><br>
+                        • السيرفر يعمل على http://localhost:8001<br>
+                        • Console للمزيد من التفاصيل (F12)
+                    </div>
+                    <pre>${error.stack || error.toString()}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

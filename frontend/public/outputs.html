@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-default-lang="ar">
+
+<head>
+  <meta charset="utf-8" />
+    <meta name="ai-designer-api-base" content="https://ai-designer-env.eba-dfn2vam3.us-east-1.elasticbeanstalk.com" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Designer | Outputs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="app.js"></script>
+</head>
+
+<body>
+  <div class="page">
+    <header class="site-header">
+      <div class="brand">
+        <div class="brand-mark">AI</div>
+        <div class="brand-text">
+          <span class="brand-title">Designer</span>
+          <span class="brand-subtitle">Autonomous BIM Design Platform</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn ghost" type="button" data-lang-toggle>AR</button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="sidebar" data-animate>
+        <p class="sidebar-title" data-i18n="sidebar.console">Console</p>
+        <nav class="sidebar-nav">
+          <a href="app.html" data-i18n="sidebar.dashboard">Dashboard</a>
+          <a href="intake.html" data-i18n="sidebar.project_intake">Project Intake</a>
+          <a href="orchestrator.html" data-i18n="sidebar.orchestrator">Orchestrator</a>
+          <a class="is-active" href="outputs.html" data-i18n="sidebar.outputs">Outputs</a>
+        </nav>
+        <div class="sidebar-card">
+          <p class="sidebar-label" data-i18n="sidebar.deliverable_pack">Deliverable Pack</p>
+          <p class="sidebar-title" data-bind="project.name">Riyadh Office Tower</p>
+          <p class="sidebar-meta" data-bind="outputs.generatedAt">Generated 11 minutes ago</p>
+          <a class="btn ghost btn-block" href="orchestrator.html" data-i18n="sidebar.rerun">Re-run</a>
+        </div>
+      </aside>
+
+      <div class="app-main">
+        <section class="app-header" data-animate>
+          <div>
+            <p class="eyebrow" data-i18n="outputs.eyebrow">Outputs</p>
+            <h1 class="page-title" data-i18n="outputs.title">BIM Deliverables</h1>
+            <p class="lead" data-i18n="outputs.lead">
+              Export IFC, drawings, schedules, and performance reports ready for stakeholder
+              review.
+            </p>
+          </div>
+          <div class="app-actions">
+            <a class="btn ghost" href="orchestrator.html" data-i18n="outputs.review_run">Review Run</a>
+          </div>
+        </section>
+
+        <section class="cad-shell" data-animate>
+          <aside class="cad-tools" aria-label="CAD tools">
+            <div class="cad-tool-group">
+              <button class="cad-tool is-active" type="button" data-tool="select" aria-pressed="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4l8 16 2-7 7-2-17-7z" />
+                </svg>
+              </button>
+              <button class="cad-tool" type="button" data-tool="pan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M2 12h20" />
+                  <path d="M7 7l-5 5 5 5" />
+                  <path d="M17 7l5 5-5 5" />
+                </svg>
+              </button>
+            </div>
+            <div class="cad-tool-group">
+              <button class="cad-tool" type="button" data-tool="wall">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="5" width="16" height="14" />
+                  <path d="M9 5v14M15 5v14" />
+                </svg>
+              </button>
+              <button class="cad-tool" type="button" data-tool="door">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 19h7V5H5z" />
+                  <path d="M12 5a7 7 0 0 1 7 7" />
+                </svg>
+              </button>
+              <button class="cad-tool" type="button" data-tool="window">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 12h16" />
+                  <path d="M6 8h12M6 16h12" />
+                </svg>
+              </button>
+            </div>
+            <div class="cad-tool-group">
+              <button class="cad-tool" type="button" data-tool="dimension">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 7h16" />
+                  <path d="M4 17h16" />
+                  <path d="M7 4v6M17 4v6M7 14v6M17 14v6" />
+                </svg>
+              </button>
+              <button class="cad-tool" type="button" data-tool="text">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 6h16" />
+                  <path d="M12 6v12" />
+                </svg>
+              </button>
+              <button class="cad-tool" type="button" data-tool="erase">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 15l7-7 6 6-7 7H4z" />
+                  <path d="M14 5l5 5" />
+                </svg>
+              </button>
+            </div>
+          </aside>
+
+          <section class="cad-main">
+            <div class="cad-topbar">
+              <div>
+                <p class="cad-topbar-title" data-i18n="outputs.plan_workspace">Plan Workspace</p>
+                <p class="muted" data-i18n="outputs.plan_subtitle">Edit and coordinate 2D layout</p>
+              </div>
+              <div class="cad-topbar-actions" role="toolbar" aria-label="Plan tools">
+                <button class="btn ghost btn-icon" type="button" data-plan-undo data-i18n="outputs.plan_undo">
+                  Undo
+                </button>
+                <button class="btn ghost btn-icon" type="button" data-plan-redo data-i18n="outputs.plan_redo">
+                  Redo
+                </button>
+                <button class="btn ghost btn-icon" type="button" data-plan-snap data-i18n="outputs.plan_snap">
+                  Snap
+                </button>
+                <button class="btn ghost btn-icon" type="button" data-plan-grid data-i18n="outputs.plan_grid">
+                  Grid
+                </button>
+                <button class="btn ghost btn-icon" type="button" data-plan-zoom="in" data-i18n="outputs.plan_zoom_in">
+                  Zoom in
+                </button>
+                <button class="btn ghost btn-icon" type="button" data-plan-zoom="out" data-i18n="outputs.plan_zoom_out">
+                  Zoom out
+                </button>
+                <button class="btn ghost" type="button" data-plan-fit data-i18n="outputs.plan_fit">Fit</button>
+                <button class="btn ghost" type="button" data-plan-reset data-i18n="outputs.plan_reset">Reset</button>
+                <button class="btn ghost" type="button" data-plan-fullscreen data-i18n="outputs.plan_fullscreen">
+                  Full screen
+                </button>
+                <button class="btn primary" type="button" data-plan-save data-i18n="outputs.plan_save">
+                  Save
+                </button>
+              </div>
+            </div>
+            <div class="cad-stage">
+              <div id="plan-view" class="plan-canvas cad-canvas" data-plan-canvas>
+                <div class="plan-placeholder muted" data-i18n="outputs.plan_loading">Loading plan...</div>
+              </div>
+            </div>
+            <div class="cad-status">
+              <span class="badge muted" data-i18n="outputs.plan_hint">Drag to pan • Scroll to zoom</span>
+              <span class="plan-scale" data-plan-scale>100%</span>
+              <span class="muted" data-cad-coords>0.00, 0.00</span>
+            </div>
+          </section>
+
+          <aside class="cad-inspector">
+            <div class="cad-section">
+              <h3 class="cad-section-title" data-i18n="outputs.properties">Properties</h3>
+              <div class="cad-properties" data-plan-properties>
+                <div class="cad-properties-row">
+                  <span data-i18n="outputs.property_tool">Tool</span>
+                  <span data-plan-tool>select</span>
+                </div>
+                <div class="cad-properties-row">
+                  <span data-i18n="outputs.property_layer">Layer</span>
+                  <span data-plan-layer>Architectural</span>
+                </div>
+                <div class="cad-properties-row">
+                  <span data-i18n="outputs.property_snaps">Snap</span>
+                  <span data-plan-snap-state>On</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="cad-section">
+              <h3 class="cad-section-title" data-i18n="outputs.layers">Layers</h3>
+              <div class="cad-layers">
+                <label class="cad-layer-toggle">
+                  <input type="checkbox" data-layer-toggle="arch" checked />
+                  <span data-i18n="outputs.layer_arch">Architectural</span>
+                </label>
+                <label class="cad-layer-toggle">
+                  <input type="checkbox" data-layer-toggle="struct" checked />
+                  <span data-i18n="outputs.layer_struct">Structural</span>
+                </label>
+                <label class="cad-layer-toggle">
+                  <input type="checkbox" data-layer-toggle="mep" checked />
+                  <span data-i18n="outputs.layer_mep">MEP</span>
+                </label>
+                <label class="cad-layer-toggle">
+                  <input type="checkbox" data-layer-toggle="annotations" checked />
+                  <span data-i18n="outputs.layer_annotations">Axes + Dimensions</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="cad-section">
+              <h3 class="cad-section-title" data-i18n="outputs.delivery_files">Delivery Files</h3>
+              <ul class="queue-list">
+                <li>
+                  <div>
+                    <p class="queue-title" data-bind="outputs.ifcFile">RiyadhTower_v09.ifc</p>
+                    <p class="queue-meta" data-i18n="outputs.meta.ifc">BIM model | 420MB</p>
+                  </div>
+                  <a class="btn ghost" data-file-link data-file-key="ifcFile" href="#">
+                    <span data-i18n="outputs.download">Download</span>
+                  </a>
+                </li>
+                <li>
+                  <div>
+                    <p class="queue-title" data-bind="outputs.mepScheduleFile">MEP_Coordination_Schedule.xlsx</p>
+                    <p class="queue-meta" data-i18n="outputs.meta.mep">Services + quantities</p>
+                  </div>
+                  <a class="btn ghost" data-file-link data-file-key="mepScheduleFile" href="#">
+                    <span data-i18n="outputs.download">Download</span>
+                  </a>
+                </li>
+                <li>
+                  <div>
+                    <p class="queue-title" data-bind="outputs.energyReportFile">Energy_Report.pdf</p>
+                    <p class="queue-meta" data-i18n="outputs.meta.energy">EUI + load analysis</p>
+                  </div>
+                  <a class="btn ghost" data-file-link data-file-key="energyReportFile" href="#">
+                    <span data-i18n="outputs.download">Download</span>
+                  </a>
+                </li>
+                <li>
+                  <div>
+                    <p class="queue-title" data-bind="outputs.reviewPackageFile">Design_Review_Package.zip</p>
+                    <p class="queue-meta" data-i18n="outputs.meta.package">Drawings + visuals</p>
+                  </div>
+                  <a class="btn ghost" data-file-link data-file-key="reviewPackageFile" href="#">
+                    <span data-i18n="outputs.download">Download</span>
+                  </a>
+                </li>
+                <li>
+                  <div>
+                    <p class="queue-title" data-bind="outputs.planSvgFile">Plan_View.svg</p>
+                    <p class="queue-meta" data-i18n="outputs.meta.plan">Generated plan drawing</p>
+                  </div>
+                  <a class="btn ghost" data-file-link data-file-key="planSvgFile" href="#">
+                    <span data-i18n="outputs.download">Download</span>
+                  </a>
+                </li>
+                <li>
+                  <div>
+                    <p class="queue-title" data-bind="outputs.gltfFile">Massing_Model.gltf</p>
+                    <p class="queue-meta" data-i18n="outputs.meta.gltf">3D massing model</p>
+                  </div>
+                  <a class="btn ghost" data-file-link data-file-key="gltfFile" href="#">
+                    <span data-i18n="outputs.download">Download</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </aside>
+        </section>
+
+        <section class="app-grid">
+          <div class="panel" data-animate>
+            <h3 data-i18n="outputs.review_files">Review Files</h3>
+            <ul class="queue-list" data-artifact-list>
+              <li class="muted" data-i18n="outputs.review_files_empty">
+                No review files yet.
+              </li>
+            </ul>
+          </div>
+
+          <div class="panel" data-animate>
+            <div class="preview-block">
+              <p class="preview-label" data-i18n="outputs.preview_3d">3D Massing</p>
+              <canvas id="model-view" class="model-canvas"></canvas>
+            </div>
+          </div>
+
+          <div class="panel" data-animate>
+            <div class="review-header">
+              <h3 data-i18n="outputs.review_notes">Architectural Review Notes</h3>
+              <span class="badge muted" data-i18n="outputs.review_badge">Architectural</span>
+            </div>
+            <div class="review-feed" data-review-feed>
+              <p class="muted" data-i18n="outputs.review_empty">
+                No review notes yet.
+              </p>
+            </div>
+            <form class="review-form" data-review-form>
+              <div class="review-fields">
+                <label class="field">
+                  <span data-i18n="outputs.review_category">Category</span>
+                  <select data-review-category>
+                    <option value="" data-i18n="outputs.review_category_default">Select</option>
+                    <option value="Layout" data-i18n="outputs.review_category_layout">Layout</option>
+                    <option value="Core" data-i18n="outputs.review_category_core">Core</option>
+                    <option value="Circulation" data-i18n="outputs.review_category_circulation">Circulation</option>
+                    <option value="Facade" data-i18n="outputs.review_category_facade">Facade</option>
+                    <option value="Code" data-i18n="outputs.review_category_code">Code compliance</option>
+                    <option value="MEP" data-i18n="outputs.review_category_mep">MEP coordination</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span data-i18n="outputs.review_priority">Priority</span>
+                  <select data-review-priority>
+                    <option value="" data-i18n="outputs.review_priority_default">Select</option>
+                    <option value="Low" data-i18n="outputs.review_priority_low">Low</option>
+                    <option value="Medium" data-i18n="outputs.review_priority_medium">Medium</option>
+                    <option value="High" data-i18n="outputs.review_priority_high">High</option>
+                    <option value="Urgent" data-i18n="outputs.review_priority_urgent">Urgent</option>
+                  </select>
+                </label>
+              </div>
+              <textarea data-review-input data-i18n-placeholder="outputs.review_placeholder"
+                placeholder="Add architectural feedback"></textarea>
+              <div class="review-actions">
+                <button class="btn primary" type="submit" data-review-submit data-i18n="outputs.review_submit">
+                  Submit Note
+                </button>
+                <button class="btn ghost" type="button" data-review-approve data-i18n="outputs.review_approve">
+                  Approve
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel" data-animate>
+            <h3 data-i18n="outputs.model_health">Model Health</h3>
+            <div class="progress-stack">
+              <div>
+                <div class="progress-label">
+                  <span data-i18n="outputs.clash_free">Clash-free routing</span>
+                  <span data-bind="outputs.clashFreeLabel">96%</span>
+                </div>
+                <div class="progress">
+                  <span data-progress="96" data-progress-bind="outputs.clashFree"></span>
+                </div>
+              </div>
+              <div>
+                <div class="progress-label">
+                  <span data-i18n="outputs.code_compliance">Code compliance</span>
+                  <span data-bind="outputs.compliance">92%</span>
+                </div>
+                <div class="progress">
+                  <span data-progress="92" data-progress-bind="outputs.complianceValue"></span>
+                </div>
+              </div>
+              <div>
+                <div class="progress-label">
+                  <span data-i18n="outputs.energy_performance">Energy performance</span>
+                  <span data-bind="outputs.energyScoreLabel">87%</span>
+                </div>
+                <div class="progress">
+                  <span data-progress="87" data-progress-bind="outputs.energyScore"></span>
+                </div>
+              </div>
+              <div>
+                <div class="progress-label">
+                  <span data-i18n="outputs.structural_utilization">Structural utilization</span>
+                  <span data-bind="outputs.structuralScoreLabel">90%</span>
+                </div>
+                <div class="progress">
+                  <span data-progress="90" data-progress-bind="outputs.structuralScore"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script defer src="viewer.js?v=2"></script>
+</body>
+
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-default-lang="ar">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="ai-designer-api-base" content="https://ai-designer-env.eba-dfn2vam3.us-east-1.elasticbeanstalk.com" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Designer | Console Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <div class="brand">
+          <div class="brand-mark">AI</div>
+          <div class="brand-text">
+            <span class="brand-title">Designer</span>
+            <span class="brand-subtitle">Autonomous BIM Design Platform</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="btn ghost" type="button" data-lang-toggle>AR</button>
+          <a class="btn primary" href="orchestrator.html" data-i18n="action.launch_run"
+            >Launch Run</a
+          >
+        </div>
+      </header>
+
+      <main class="app-shell">
+        <aside class="sidebar" data-animate>
+          <p class="sidebar-title" data-i18n="sidebar.console">Console</p>
+          <nav class="sidebar-nav">
+            <a class="is-active" href="app.html" data-i18n="sidebar.dashboard"
+              >Dashboard</a
+            >
+            <a href="intake.html" data-i18n="sidebar.project_intake">Project Intake</a>
+            <a href="orchestrator.html" data-i18n="sidebar.orchestrator">Orchestrator</a>
+            <a href="outputs.html" data-i18n="sidebar.outputs">Outputs</a>
+          </nav>
+          <div class="sidebar-card">
+            <p class="sidebar-label" data-i18n="sidebar.active_project">Active Project</p>
+            <p class="sidebar-title" data-bind="project.name">Riyadh Office Tower</p>
+            <p class="sidebar-meta" data-bind="project.meta">28,500 m2 | Phase: Schematic</p>
+            <div class="chip-row">
+              <span class="badge" data-i18n="badge.architectural">Architectural</span>
+              <span class="badge" data-i18n="badge.structural">Structural</span>
+              <span class="badge" data-i18n="badge.mep">MEP</span>
+            </div>
+            <a class="btn ghost btn-block" href="outputs.html" data-i18n="sidebar.view_outputs"
+              >View Outputs</a
+            >
+          </div>
+        </aside>
+
+        <div class="app-main">
+          <section class="app-header" data-animate>
+            <div>
+              <p class="eyebrow" data-i18n="dashboard.eyebrow">AI Designer Console</p>
+              <h1 class="page-title" data-i18n="dashboard.title">Dashboard</h1>
+              <p class="lead" data-i18n="dashboard.lead">
+                Monitor live agent performance, project health, and queued orchestration runs
+                across GCC projects.
+              </p>
+            </div>
+            <div class="app-actions">
+              <a class="btn ghost" href="intake.html" data-i18n="dashboard.new_project"
+                >New Project</a
+              >
+              <a class="btn primary" href="orchestrator.html" data-i18n="dashboard.open_orchestrator"
+                >Open Orchestrator</a
+              >
+            </div>
+          </section>
+
+          <section class="app-grid">
+            <div class="panel" data-animate>
+              <h3 data-i18n="dashboard.active_projects">Active Projects</h3>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="dashboard.table.project">Project</th>
+                    <th data-i18n="dashboard.table.region">Region</th>
+                    <th data-i18n="dashboard.table.status">Status</th>
+                    <th data-i18n="dashboard.table.next_run">Next Run</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td data-bind="project.name">Riyadh Office Tower</td>
+                    <td data-bind="project.region">Saudi Arabia</td>
+                    <td><span class="badge" data-status-badge data-bind="project.status">Running</span></td>
+                    <td data-bind="project.nextRun">Structural re-optim</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
