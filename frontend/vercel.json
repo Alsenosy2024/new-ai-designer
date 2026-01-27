@@ -7,7 +7,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://your-backend-url.vercel.app/api/:path*"
+      "destination": "http://ai-designer-env.eba-dfn2vam3.us-east-1.elasticbeanstalk.com/api/:path*"
+    },
+    {
+      "source": "/files/:path*",
+      "destination": "http://ai-designer-env.eba-dfn2vam3.us-east-1.elasticbeanstalk.com/files/:path*"
     }
   ]
 }
