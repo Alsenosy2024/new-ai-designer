@@ -670,6 +670,28 @@ function ensureValue(value, fallback) {
   return value;
 }
 
+function isBackendState(state) {
+  return Boolean(state?.project?.id);
+}
+
+function hasOutputFiles(outputs) {
+  if (!outputs) return false;
+  return Boolean(
+    outputs.planSvgFile ||
+      outputs.gltfFile ||
+      outputs.ifcFile ||
+      outputs.mepScheduleFile ||
+      outputs.energyReportFile ||
+      outputs.reviewPackageFile
+  );
+}
+
+function normalizeFileName(value) {
+  if (!value) return "";
+  const parts = String(value).split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] || "";
+}
+
 function toNumber(value) {
   if (typeof value === "number") return value;
   if (!value) return 0;
@@ -751,54 +773,70 @@ function updateDerivedState(state) {
     state.run.conflicts = `${count} conflict${count === 1 ? "" : "s"}`;
   }
 
-  state.outputs.energy = ensureValue(state.outputs.energy, defaultState.outputs.energy);
-  state.outputs.compliance = ensureValue(
-    state.outputs.compliance,
-    defaultState.outputs.compliance
-  );
+  const backendState = isBackendState(state);
+  const demoFallback = !backendState;
+
+  state.outputs.energy = demoFallback
+    ? ensureValue(state.outputs.energy, defaultState.outputs.energy)
+    : state.outputs.energy || "";
+  state.outputs.compliance = demoFallback
+    ? ensureValue(state.outputs.compliance, defaultState.outputs.compliance)
+    : state.outputs.compliance || "";
 
   const complianceValue = toNumber(state.outputs.compliance);
   state.outputs.complianceValue =
     complianceValue || state.outputs.complianceValue || 0;
   state.outputs.clashFree = toNumber(
-    ensureValue(state.outputs.clashFree, defaultState.outputs.clashFree)
+    demoFallback
+      ? ensureValue(state.outputs.clashFree, defaultState.outputs.clashFree)
+      : state.outputs.clashFree
   );
   state.outputs.energyScore = toNumber(
-    ensureValue(state.outputs.energyScore, defaultState.outputs.energyScore)
+    demoFallback
+      ? ensureValue(state.outputs.energyScore, defaultState.outputs.energyScore)
+      : state.outputs.energyScore
   );
   state.outputs.structuralScore = toNumber(
-    ensureValue(state.outputs.structuralScore, defaultState.outputs.structuralScore)
+    demoFallback
+      ? ensureValue(state.outputs.structuralScore, defaultState.outputs.structuralScore)
+      : state.outputs.structuralScore
   );
   state.outputs.clashFreeLabel = `${state.outputs.clashFree}%`;
   state.outputs.energyScoreLabel = `${state.outputs.energyScore}%`;
   state.outputs.structuralScoreLabel = `${state.outputs.structuralScore}%`;
 
-  state.outputs.ifcFile = ensureValue(
-    state.outputs.ifcFile,
-    defaultState.outputs.ifcFile
-  );
-  state.outputs.mepScheduleFile = ensureValue(
-    state.outputs.mepScheduleFile,
-    defaultState.outputs.mepScheduleFile
-  );
-  state.outputs.energyReportFile = ensureValue(
-    state.outputs.energyReportFile,
-    defaultState.outputs.energyReportFile
-  );
-  state.outputs.reviewPackageFile = ensureValue(
-    state.outputs.reviewPackageFile,
-    defaultState.outputs.reviewPackageFile
-  );
-  state.outputs.planSvgFile = ensureValue(
-    state.outputs.planSvgFile,
-    defaultState.outputs.planSvgFile
-  );
-  state.outputs.gltfFile = ensureValue(
-    state.outputs.gltfFile,
-    defaultState.outputs.gltfFile
-  );
+  if (demoFallback) {
+    state.outputs.ifcFile = ensureValue(state.outputs.ifcFile, defaultState.outputs.ifcFile);
+    state.outputs.mepScheduleFile = ensureValue(
+      state.outputs.mepScheduleFile,
+      defaultState.outputs.mepScheduleFile
+    );
+    state.outputs.energyReportFile = ensureValue(
+      state.outputs.energyReportFile,
+      defaultState.outputs.energyReportFile
+    );
+    state.outputs.reviewPackageFile = ensureValue(
+      state.outputs.reviewPackageFile,
+      defaultState.outputs.reviewPackageFile
+    );
+    state.outputs.planSvgFile = ensureValue(
+      state.outputs.planSvgFile,
+      defaultState.outputs.planSvgFile
+    );
+    state.outputs.gltfFile = ensureValue(
+      state.outputs.gltfFile,
+      defaultState.outputs.gltfFile
+    );
+  } else {
+    state.outputs.ifcFile = state.outputs.ifcFile || "";
+    state.outputs.mepScheduleFile = state.outputs.mepScheduleFile || "";
+    state.outputs.energyReportFile = state.outputs.energyReportFile || "";
+    state.outputs.reviewPackageFile = state.outputs.reviewPackageFile || "";
+    state.outputs.planSvgFile = state.outputs.planSvgFile || "";
+    state.outputs.gltfFile = state.outputs.gltfFile || "";
+  }
 
-  if (!state.outputs.generatedAt) {
+  if (!state.outputs.generatedAt && demoFallback) {
     state.outputs.generatedAt = defaultState.outputs.generatedAt;
   }
 }
@@ -882,6 +920,84 @@ function buildFileUrl(state, fileName) {
   return `${base}/files/${state.project.id}/${state.run.id}/${fileName}`;
 }
 
+function pickLatestArtifact(artifacts, predicate) {
+  const filtered = (artifacts || []).filter(predicate);
+  return filtered[filtered.length - 1];
+}
+
+function pickArtifactByKinds(artifacts, kinds) {
+  const kindSet = new Set(kinds);
+  return pickLatestArtifact(artifacts, (artifact) => kindSet.has(artifact.kind));
+}
+
+function pickArtifactByExtensions(artifacts, extensions, exclude = []) {
+  const extList = extensions.map((ext) => ext.toLowerCase());
+  const excludeList = exclude.map((ext) => ext.toLowerCase());
+  return pickLatestArtifact(artifacts, (artifact) => {
+    const name = String(artifact.file_name || "").toLowerCase();
+    if (excludeList.some((needle) => name.includes(needle))) return false;
+    return extList.some((ext) => name.endsWith(ext));
+  });
+}
+
+function applyArtifactsToState(state, artifacts) {
+  if (!state?.project?.id || !state?.run?.id) return false;
+  const outputs = state.outputs || {};
+  const next = { ...outputs };
+
+  const plan =
+    pickArtifactByKinds(artifacts, ["plan", "plan_svg"]) ||
+    pickArtifactByExtensions(artifacts, [".svg"], ["structural"]);
+  const structuralPlan =
+    pickArtifactByKinds(artifacts, ["structural_plan"]) ||
+    pickArtifactByExtensions(artifacts, ["structural_plan.svg"]);
+  const gltf =
+    pickArtifactByKinds(artifacts, ["gltf", "model", "3d"]) ||
+    pickArtifactByExtensions(artifacts, [".gltf"]);
+  const ifc =
+    pickArtifactByKinds(artifacts, ["ifc", "bim"]) ||
+    pickArtifactByExtensions(artifacts, [".ifc"]);
+  const dxf =
+    pickArtifactByKinds(artifacts, ["dxf", "cad"]) ||
+    pickArtifactByExtensions(artifacts, [".dxf"]);
+  const schedule =
+    pickArtifactByKinds(artifacts, ["schedule", "mep_schedule"]) ||
+    pickArtifactByExtensions(artifacts, [".xlsx"]);
+  const energy =
+    pickArtifactByKinds(artifacts, ["energy", "energy_report"]) ||
+    pickArtifactByExtensions(artifacts, ["energy_report.pdf", ".pdf"]);
+  const structural =
+    pickArtifactByKinds(artifacts, ["structural", "structural_report"]) ||
+    pickArtifactByExtensions(artifacts, ["structural_report.pdf"]);
+  const mep =
+    pickArtifactByKinds(artifacts, ["mep", "mep_layout"]) ||
+    pickArtifactByExtensions(artifacts, ["mep_layout.json", ".json"]);
+  const reviewPackage =
+    pickArtifactByKinds(artifacts, ["package", "review_package"]) ||
+    pickArtifactByExtensions(artifacts, [".zip"]);
+
+  if (plan?.file_name) next.planSvgFile = plan.file_name;
+  if (gltf?.file_name) next.gltfFile = gltf.file_name;
+  if (ifc?.file_name) next.ifcFile = ifc.file_name;
+  if (dxf?.file_name) next.dxfFile = dxf.file_name;
+  if (schedule?.file_name) next.mepScheduleFile = schedule.file_name;
+  if (energy?.file_name) next.energyReportFile = energy.file_name;
+  if (structural?.file_name) next.structuralReportFile = structural.file_name;
+  if (structuralPlan?.file_name) next.structuralPlanFile = structuralPlan.file_name;
+  if (mep?.file_name) next.mepLayoutFile = mep.file_name;
+  if (reviewPackage?.file_name) next.reviewPackageFile = reviewPackage.file_name;
+
+  if (hasOutputFiles(next) && !next.generatedAt) {
+    next.generatedAt = "Generated moments ago";
+  }
+
+  const changed = JSON.stringify(outputs) !== JSON.stringify(next);
+  if (changed) {
+    state.outputs = next;
+  }
+  return changed;
+}
+
 function applyFileLinks(state) {
   document.querySelectorAll("[data-file-link]").forEach((link) => {
     const key = link.dataset.fileKey;
@@ -932,6 +1048,7 @@ function mapApiToState(payload) {
   const project = payload?.project || {};
   const run = payload?.run || {};
   const outputs = payload?.outputs || {};
+  const backendProject = Boolean(project.id);
 
   return mergeState({
     project: {
@@ -964,24 +1081,38 @@ function mapApiToState(payload) {
     },
     outputs: {
       id: outputs.id || "",
-      clashDensity: outputs.clash_density || defaultState.outputs.clashDensity,
+      clashDensity:
+        outputs.clash_density || (backendProject ? "" : defaultState.outputs.clashDensity),
       structuralVariance:
-        outputs.structural_variance || defaultState.outputs.structuralVariance,
-      compliance: outputs.compliance || defaultState.outputs.compliance,
-      energy: outputs.energy || defaultState.outputs.energy,
-      clashFree: outputs.clash_free || defaultState.outputs.clashFree,
-      energyScore: outputs.energy_score || defaultState.outputs.energyScore,
-      structuralScore: outputs.structural_score || defaultState.outputs.structuralScore,
-      ifcFile: outputs.ifc_file || defaultState.outputs.ifcFile,
+        outputs.structural_variance ||
+        (backendProject ? "" : defaultState.outputs.structuralVariance),
+      compliance: outputs.compliance || (backendProject ? "" : defaultState.outputs.compliance),
+      energy: outputs.energy || (backendProject ? "" : defaultState.outputs.energy),
+      clashFree:
+        outputs.clash_free ?? (backendProject ? 0 : defaultState.outputs.clashFree),
+      energyScore:
+        outputs.energy_score ?? (backendProject ? 0 : defaultState.outputs.energyScore),
+      structuralScore:
+        outputs.structural_score ?? (backendProject ? 0 : defaultState.outputs.structuralScore),
+      ifcFile:
+        normalizeFileName(outputs.ifc_file) ||
+        (backendProject ? "" : defaultState.outputs.ifcFile),
       mepScheduleFile:
-        outputs.mep_schedule_file || defaultState.outputs.mepScheduleFile,
+        normalizeFileName(outputs.mep_schedule_file) ||
+        (backendProject ? "" : defaultState.outputs.mepScheduleFile),
       energyReportFile:
-        outputs.energy_report_file || defaultState.outputs.energyReportFile,
+        normalizeFileName(outputs.energy_report_file) ||
+        (backendProject ? "" : defaultState.outputs.energyReportFile),
       reviewPackageFile:
-        outputs.review_package_file || defaultState.outputs.reviewPackageFile,
-      planSvgFile: outputs.plan_svg_file || defaultState.outputs.planSvgFile,
-      gltfFile: outputs.gltf_file || defaultState.outputs.gltfFile,
-      generatedAt: outputs.generated_at || defaultState.outputs.generatedAt,
+        normalizeFileName(outputs.review_package_file) ||
+        (backendProject ? "" : defaultState.outputs.reviewPackageFile),
+      planSvgFile:
+        normalizeFileName(outputs.plan_svg_file) ||
+        (backendProject ? "" : defaultState.outputs.planSvgFile),
+      gltfFile:
+        normalizeFileName(outputs.gltf_file) ||
+        (backendProject ? "" : defaultState.outputs.gltfFile),
+      generatedAt: outputs.generated_at || (backendProject ? "" : defaultState.outputs.generatedAt),
     },
   });
 }
@@ -1342,6 +1473,7 @@ const artifactList = document.querySelector("[data-artifact-list]");
 
 let isOrchestratorRunning = false;
 let isStateRefreshing = false;
+let isArtifactRefreshing = false;
 
 const orchestratorMessages = {
   en: [
@@ -1636,55 +1768,85 @@ async function refreshReviewNotes() {
 }
 
 async function refreshRunArtifacts() {
-  if (!artifactList) return;
+  if (!artifactList || isArtifactRefreshing) return;
+  isArtifactRefreshing = true;
   const state = loadState();
-  if (!state?.run?.id) return;
+  if (!state?.run?.id) {
+    isArtifactRefreshing = false;
+    return;
+  }
   const bases = activeApiBase ? [activeApiBase] : API_BASES;
-  const allowedKinds = new Set(["structural_plan", "structural", "mep"]);
-  for (const base of bases) {
-    try {
-      const artifacts = await requestApi(base, `/api/runs/${state.run.id}/artifacts`);
-      if (!artifacts) continue;
-      setActiveApiBase(base);
-      artifactList.innerHTML = "";
-      const filtered = artifacts.filter((artifact) => allowedKinds.has(artifact.kind));
-      if (!filtered.length) {
-        const empty = document.createElement("li");
-        empty.classList.add("muted");
-        empty.textContent = translate("outputs.review_files_empty");
-        artifactList.appendChild(empty);
-        return;
-      }
-      filtered.forEach((artifact) => {
-        const li = document.createElement("li");
-        const meta = document.createElement("div");
-        const title = document.createElement("p");
-        const subtitle = document.createElement("p");
-        title.className = "queue-title";
-        title.textContent = artifact.file_name;
-        subtitle.className = "queue-meta";
-        subtitle.textContent = artifact.description || artifact.kind;
-        meta.appendChild(title);
-        meta.appendChild(subtitle);
+  const allowedKinds = new Set([
+    "plan",
+    "plan_svg",
+    "gltf",
+    "ifc",
+    "dxf",
+    "schedule",
+    "energy",
+    "structural",
+    "structural_report",
+    "structural_plan",
+    "mep",
+    "mep_layout",
+    "package",
+    "review_package",
+  ]);
+  try {
+    for (const base of bases) {
+      try {
+        const artifacts = await requestApi(base, `/api/runs/${state.run.id}/artifacts`);
+        if (!artifacts) continue;
+        setActiveApiBase(base);
 
-        const link = document.createElement("a");
-        link.className = "btn ghost";
-        link.textContent = translate("outputs.download");
-        const url = buildFileUrl(state, artifact.file_name);
-        if (url) {
-          link.setAttribute("href", url);
-          link.setAttribute("download", artifact.file_name);
-        } else {
-          link.classList.add("is-disabled");
+        const latestState = loadState();
+        if (applyArtifactsToState(latestState, artifacts)) {
+          saveState(latestState);
+          applyState(latestState);
         }
-        li.appendChild(meta);
-        li.appendChild(link);
-        artifactList.appendChild(li);
-      });
-      return;
-    } catch (error) {
-      continue;
+
+        artifactList.innerHTML = "";
+        const filtered = artifacts.filter((artifact) => allowedKinds.has(artifact.kind));
+        if (!filtered.length) {
+          const empty = document.createElement("li");
+          empty.classList.add("muted");
+          empty.textContent = translate("outputs.review_files_empty");
+          artifactList.appendChild(empty);
+          return;
+        }
+        filtered.forEach((artifact) => {
+          const li = document.createElement("li");
+          const meta = document.createElement("div");
+          const title = document.createElement("p");
+          const subtitle = document.createElement("p");
+          title.className = "queue-title";
+          title.textContent = artifact.file_name;
+          subtitle.className = "queue-meta";
+          subtitle.textContent = artifact.description || artifact.kind;
+          meta.appendChild(title);
+          meta.appendChild(subtitle);
+
+          const link = document.createElement("a");
+          link.className = "btn ghost";
+          link.textContent = translate("outputs.download");
+          const url = buildFileUrl(latestState, artifact.file_name);
+          if (url) {
+            link.setAttribute("href", url);
+            link.setAttribute("download", artifact.file_name);
+          } else {
+            link.classList.add("is-disabled");
+          }
+          li.appendChild(meta);
+          li.appendChild(link);
+          artifactList.appendChild(li);
+        });
+        return;
+      } catch (error) {
+        continue;
+      }
     }
+  } finally {
+    isArtifactRefreshing = false;
   }
 }
 
@@ -1745,7 +1907,11 @@ if (shouldPoll) {
   refreshRunArtifacts();
   setInterval(() => {
     const state = loadState();
-    if (state?.run?.status && state.run.status.toLowerCase().includes("progress")) {
+    const status = String(state?.run?.status || "").toLowerCase();
+    const needsUpdates =
+      Boolean(state?.run?.id) &&
+      (status.includes("progress") || !hasOutputFiles(state.outputs));
+    if (needsUpdates) {
       refreshStateFromApi();
     }
   }, 5000);
