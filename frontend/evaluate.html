@@ -492,6 +492,7 @@
             ? 'http://localhost:8001'
             : '';
         let isRunning = false;
+        let currentRunId = null;
 
         // Check server status
         async function checkServer() {
@@ -500,7 +501,7 @@
                 if (response.ok) {
                     document.getElementById('serverStatus').classList.add('online');
                     document.getElementById('serverText').textContent = 'متصل';
-                    document.getElementById('apiUrl').textContent = window.location.origin;
+                    document.getElementById('apiUrl').textContent = API_URL || window.location.origin;
                     return true;
                 }
                 throw new Error('Not OK');
@@ -541,20 +542,41 @@
             document.getElementById('progressText').textContent = `${percent}% - ${text}`;
         }
 
-        // Start design process
+        // Poll for design completion
+        async function pollForCompletion() {
+            while (isRunning) {
+                try {
+                    const response = await fetch(`${API_URL}/api/state`);
+                    if (response.ok) {
+                        const state = await response.json();
+                        if (state.run?.status === 'Complete') {
+                            return state;
+                        } else if (state.run?.status === 'Failed') {
+                            throw new Error('Design failed: ' + state.run.conflicts);
+                        }
+                    }
+                } catch (e) {
+                    addLog(`خطأ في الاستعلام: ${e.message}`, 'error');
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            return null;
+        }
+
+        // Start design process using REAL API
         async function startDesign() {
             if (isRunning) return;
 
             const serverOnline = await checkServer();
             if (!serverOnline) {
-                alert('الخادم غير متصل. تأكد من تشغيل الخادم على http://localhost:8001');
-                return;
+                addLog('الخادم غير متصل - سيتم استخدام وضع العرض', 'info');
             }
 
             isRunning = true;
             document.getElementById('startBtn').disabled = true;
             document.getElementById('startBtn').innerHTML = '⏳ جاري التصميم...';
             document.getElementById('resultsPanel').classList.add('active');
+            document.getElementById('outputSection').innerHTML = '';
 
             const project = {
                 name: document.getElementById('projectName').value,
@@ -566,8 +588,225 @@
             };
 
             addLog(`بدء تصميم مشروع: ${project.name}`, 'info');
-
             const startTime = Date.now();
+
+            try {
+                // Step 1: Create project via API
+                updateAgentStatus('architecture', 'running', 'يعمل...');
+                updateProgress(10, 'إنشاء المشروع');
+                addLog('إرسال بيانات المشروع للخادم...', 'info');
+
+                const projectPayload = {
+                    project: {
+                        name: project.name,
+                        type: project.buildingType,
+                        floors: String(project.floors),
+                        gfa: String(project.totalArea),
+                        region: project.location
+                    }
+                };
+
+                const stateResponse = await fetch(`${API_URL}/api/state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(projectPayload)
+                });
+
+                if (!stateResponse.ok) {
+                    throw new Error('فشل إنشاء المشروع');
+                }
+                addLog('تم إنشاء المشروع بنجاح', 'success');
+
+                // Step 2: Start REAL design run
+                updateProgress(20, 'بدء التصميم الحقيقي');
+                addLog('بدء محرك التصميم الهندسي...', 'info');
+
+                const runResponse = await fetch(`${API_URL}/api/runs/start`, {
+                    method: 'POST'
+                });
+
+                if (!runResponse.ok) {
+                    throw new Error('فشل بدء التصميم');
+                }
+
+                const runData = await runResponse.json();
+                currentRunId = runData.run?.id;
+                addLog(`تم بدء التصميم - Run ID: ${currentRunId?.substring(0, 8)}...`, 'success');
+
+                // Step 3: Poll for completion and update UI
+                updateAgentStatus('architecture', 'running', 'يصمم...');
+                updateProgress(30, 'تحليل معماري');
+
+                // Poll for events and update progress
+                let lastEventCount = 0;
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const eventsResponse = await fetch(`${API_URL}/api/runs/${currentRunId}/events`);
+                        if (eventsResponse.ok) {
+                            const events = await eventsResponse.json();
+                            for (let i = lastEventCount; i < events.length; i++) {
+                                const event = events[i];
+                                addLog(event.message, event.level === 'error' ? 'error' : event.level === 'success' ? 'success' : 'info');
+
+                                // Update agent status based on step
+                                if (event.step === 'architecture') {
+                                    updateAgentStatus('architecture', 'running', 'يصمم...');
+                                    updateProgress(40, 'تصميم معماري');
+                                } else if (event.step === 'structural') {
+                                    updateAgentStatus('architecture', 'done', 'مكتمل ✓');
+                                    updateAgentStatus('structural', 'running', 'يصمم...');
+                                    updateProgress(55, 'تصميم إنشائي');
+                                } else if (event.step === 'mep') {
+                                    updateAgentStatus('structural', 'done', 'مكتمل ✓');
+                                    updateAgentStatus('mep', 'running', 'يصمم...');
+                                    updateProgress(70, 'تصميم MEP');
+                                } else if (event.step === 'finalization') {
+                                    updateAgentStatus('mep', 'done', 'مكتمل ✓');
+                                    updateAgentStatus('interior', 'running', 'يصمم...');
+                                    updateProgress(85, 'إنهاء التصميم');
+                                }
+                            }
+                            lastEventCount = events.length;
+                        }
+                    } catch (e) {
+                        // Ignore polling errors
+                    }
+                }, 500);
+
+                // Wait for completion
+                const finalState = await pollForCompletion();
+                clearInterval(pollInterval);
+
+                if (!finalState) {
+                    throw new Error('تم إلغاء التصميم');
+                }
+
+                // Step 4: Get REAL design data
+                updateProgress(90, 'جلب النتائج الحقيقية');
+                addLog('جلب بيانات التصميم الحقيقية...', 'info');
+
+                const designResponse = await fetch(`${API_URL}/api/design/data`);
+                if (!designResponse.ok) {
+                    throw new Error('فشل جلب بيانات التصميم');
+                }
+
+                const designData = await designResponse.json();
+                addLog('تم استلام بيانات التصميم الحقيقية', 'success');
+
+                // Display REAL results
+                displayRealResults(designData, finalState.outputs, project);
+
+                // Update agent statuses
+                updateAgentStatus('architecture', 'done', 'مكتمل ✓');
+                updateAgentStatus('structural', 'done', 'مكتمل ✓');
+                updateAgentStatus('mep', 'done', 'مكتمل ✓');
+                updateAgentStatus('interior', 'done', 'مكتمل ✓');
+
+                const endTime = Date.now();
+                const executionTime = ((endTime - startTime) / 1000).toFixed(2);
+
+                document.getElementById('resultTime').textContent = `${executionTime} ث`;
+                updateProgress(100, 'مكتمل - نتائج حقيقية');
+                addLog(`تم الانتهاء من التصميم الحقيقي في ${executionTime} ثانية`, 'success');
+
+            } catch (error) {
+                addLog(`خطأ: ${error.message}`, 'error');
+                // Fallback to demo mode if API fails
+                addLog('التحول إلى وضع العرض التوضيحي...', 'info');
+                await runDemoMode(project, startTime);
+            }
+
+            isRunning = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').innerHTML = '🔄 إعادة التصميم';
+        }
+
+        // Display REAL results from API
+        function displayRealResults(designData, outputs, project) {
+            const arch = designData.architectural;
+            const struct = designData.structural;
+            const mep = designData.mep;
+            const coord = designData.coordination;
+
+            // Update summary metrics
+            document.getElementById('resultArea').textContent = `${Math.round(arch.massing.total_area).toLocaleString()} م²`;
+            document.getElementById('resultFloors').textContent = arch.massing.floors;
+            document.getElementById('resultConflicts').textContent = `${coord.conflicts_found} → ${coord.conflicts_resolved}`;
+
+            // Clear and add REAL outputs
+            const outputSection = document.getElementById('outputSection');
+            outputSection.innerHTML = '';
+
+            // Architectural output (REAL)
+            addRealOutput('architecture', 'التصميم المعماري (حقيقي)', [
+                `أبعاد المبنى: ${arch.massing.width.toFixed(1)}م × ${arch.massing.depth.toFixed(1)}م`,
+                `الارتفاع الكلي: ${arch.massing.height.toFixed(1)} م (${arch.massing.floors} طوابق)`,
+                `مساحة الكور: ${arch.core.area.toFixed(0)} م² (${arch.core.ratio}%)`,
+                `كفاءة المبنى: ${arch.efficiency}%`,
+                `عدد الفراغات: ${arch.spaces.length}`,
+                `WWR شمال/جنوب: ${(arch.facade.wwr_north * 100).toFixed(0)}% / ${(arch.facade.wwr_south * 100).toFixed(0)}%`
+            ]);
+
+            // Structural output (REAL - ACI 318)
+            const avgUtil = (struct.columns.reduce((sum, c) => sum + c.utilization, 0) / struct.columns.length * 100).toFixed(0);
+            addRealOutput('structural', 'النظام الإنشائي (ACI 318-19)', [
+                `النظام الجانبي: ${struct.system.replace('_', ' ')}`,
+                `شبكة الأعمدة: ${struct.grid.bay_x}م × ${struct.grid.bay_y}م`,
+                `عدد الأعمدة: ${struct.columns.length} (${struct.grid.columns_x} × ${struct.grid.columns_y})`,
+                `أبعاد العمود النموذجي: ${struct.columns[0]?.size[0]}×${struct.columns[0]?.size[1]} مم`,
+                `معدل استخدام الأعمدة: ${avgUtil}%`,
+                `سماكة البلاطة: ${struct.slab.thickness_mm} مم (${struct.slab.type})`,
+                `الحمل المضروب: ${struct.loads.factored_kN_m2} kN/m²`,
+                `الفترة الطبيعية: ${struct.period_s} ث`
+            ]);
+
+            // MEP output (REAL - ASHRAE)
+            addRealOutput('mep', 'أنظمة MEP (ASHRAE)', [
+                `نظام التكييف: ${mep.hvac.system_type}`,
+                `حمل التبريد: ${mep.hvac.total_cooling_ton.toFixed(0)} طن (${mep.hvac.total_cooling_kW.toFixed(0)} kW)`,
+                `الحمل الحساس: ${mep.hvac.sensible_kW.toFixed(0)} kW`,
+                `هواء التغذية: ${mep.hvac.supply_air_cfm.toFixed(0)} CFM`,
+                `COP: ${mep.hvac.cop}`,
+                `الحمل الكهربائي الإجمالي: ${mep.electrical.total_connected_kW.toFixed(0)} kW`,
+                `الحمل الذروي: ${mep.electrical.peak_demand_kW.toFixed(0)} kW`,
+                `المحول: ${mep.electrical.transformer_kVA} kVA`,
+                `عدد المصاعد: ${mep.electrical.elevator_count}`,
+                `استهلاك المياه: ${mep.plumbing.water_demand_Lpd.toFixed(0)} لتر/يوم`
+            ]);
+
+            // Coordination output
+            addRealOutput('interior', 'التنسيق والتعارضات', [
+                `التعارضات المكتشفة: ${coord.conflicts_found}`,
+                `التعارضات المحلولة: ${coord.conflicts_resolved}`,
+                `نسبة خلو التعارضات: ${coord.clash_free_percent}%`,
+                `درجة التنسيق: ${coord.coordination_score}/100`,
+                ...coord.conflicts.slice(0, 3).map(c => `⚠️ ${c.description}`)
+            ]);
+
+            // Add metrics badge
+            if (outputs) {
+                addLog(`📊 Clash Density: ${outputs.clash_density}`, 'success');
+                addLog(`📊 Structural Variance: ${outputs.structural_variance}`, 'success');
+                addLog(`📊 Compliance: ${outputs.compliance}`, 'success');
+            }
+        }
+
+        // Add real output to results
+        function addRealOutput(agent, title, items) {
+            const outputSection = document.getElementById('outputSection');
+            const div = document.createElement('div');
+            div.className = `output-item ${agent}`;
+            div.innerHTML = `
+                <strong>${title}</strong>
+                <ul style="margin: 8px 0 0 20px; font-size: 13px; color: #94a3b8;">
+                    ${items.map(item => `<li>${item}</li>`).join('')}
+                </ul>
+            `;
+            outputSection.appendChild(div);
+        }
+
+        // Fallback demo mode (when API unavailable)
+        async function runDemoMode(project, startTime) {
             const agents = ['architecture', 'structural', 'mep', 'interior'];
             const agentNames = {
                 architecture: 'المعماري',
@@ -576,126 +815,76 @@
                 interior: 'التصميم الداخلي'
             };
 
-            // Simulate agent execution with real calculations
             for (let i = 0; i < agents.length; i++) {
                 const agent = agents[i];
                 updateAgentStatus(agent, 'running', 'يعمل...');
-                updateProgress(Math.round((i / agents.length) * 100), `تشغيل ${agentNames[agent]}`);
-                addLog(`بدء ${agentNames[agent]}...`, 'info');
+                updateProgress(Math.round((i / agents.length) * 100), `تشغيل ${agentNames[agent]} (عرض)`);
+                addLog(`بدء ${agentNames[agent]} (وضع العرض)...`, 'info');
 
-                // Simulate work
                 await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 500));
 
-                // Generate outputs based on agent
-                const output = generateAgentOutput(agent, project);
-                addOutput(agent, agentNames[agent], output);
+                const output = generateDemoOutput(agent, project);
+                addRealOutput(agent, output.title, output.items);
 
                 updateAgentStatus(agent, 'done', 'مكتمل ✓');
-                addLog(`${agentNames[agent]} اكتمل بنجاح`, 'success');
+                addLog(`${agentNames[agent]} اكتمل`, 'success');
             }
 
-            // Calculate final results
             const endTime = Date.now();
             const executionTime = ((endTime - startTime) / 1000).toFixed(2);
-            const totalConflicts = Math.floor(Math.random() * 50) + 300;
+            const designedArea = Math.floor(project.totalArea * 0.87);
 
-            // Try to start actual design run via API
-            try {
-                const response = await fetch(`${API_URL}/api/state`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ project })
-                });
-
-                if (response.ok) {
-                    addLog('تم حفظ المشروع في الخادم', 'success');
-                }
-            } catch (e) {
-                addLog('تشغيل في وضع العرض المحلي', 'info');
-            }
-
-            // Update results
-            const designedArea = Math.floor(project.totalArea * (0.85 + Math.random() * 0.1));
             document.getElementById('resultArea').textContent = `${designedArea.toLocaleString()} م²`;
             document.getElementById('resultFloors').textContent = project.floors;
-            document.getElementById('resultConflicts').textContent = totalConflicts;
+            document.getElementById('resultConflicts').textContent = '12 → 8';
             document.getElementById('resultTime').textContent = `${executionTime} ث`;
 
-            updateProgress(100, 'مكتمل');
-            addLog(`تم الانتهاء من التصميم في ${executionTime} ثانية`, 'success');
-            addLog(`تم حل ${totalConflicts} تعارض بين الوكلاء`, 'success');
-
-            isRunning = false;
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('startBtn').innerHTML = '🔄 إعادة التصميم';
+            updateProgress(100, 'مكتمل (وضع العرض)');
+            addLog(`تم الانتهاء في ${executionTime} ثانية (وضع العرض)`, 'success');
         }
 
-        // Generate agent-specific output
-        function generateAgentOutput(agent, project) {
+        // Generate demo output (fallback)
+        function generateDemoOutput(agent, project) {
             const floorArea = project.totalArea / project.floors;
 
             switch(agent) {
                 case 'architecture':
                     return {
-                        title: 'التصميم المعماري',
+                        title: 'التصميم المعماري (عرض توضيحي)',
                         items: [
-                            `مساحة الطابق النموذجي: ${Math.floor(floorArea)} م²`,
+                            `مساحة الطابق: ${Math.floor(floorArea)} م²`,
                             `أبعاد المبنى: ${Math.floor(Math.sqrt(floorArea) * 1.2)}م × ${Math.floor(Math.sqrt(floorArea) * 0.85)}م`,
                             `نسبة الكور: 18%`,
-                            `الارتفاع الكلي: ${(project.floors * 3.6).toFixed(1)} م`,
-                            `نظام الواجهة: زجاج مزدوج عاكس`
+                            `الارتفاع: ${(project.floors * 3.6).toFixed(1)} م`
                         ]
                     };
                 case 'structural':
-                    const system = project.floors > 10 ? 'Core + Outrigger' : 'Moment Frame';
                     return {
-                        title: 'النظام الإنشائي',
+                        title: 'النظام الإنشائي (عرض توضيحي)',
                         items: [
-                            `النظام: ${system}`,
+                            `النظام: ${project.floors > 10 ? 'Core + Outrigger' : 'Moment Frame'}`,
                             `شبكة الأعمدة: 8.4م × 8.4م`,
-                            `أبعاد الأعمدة: ${300 + project.floors * 20}×${300 + project.floors * 20} مم`,
-                            `سماكة البلاطة: ${180 + Math.floor(floorArea / 500) * 10} مم`,
-                            `الانحراف الجانبي: H/${350 + Math.floor(Math.random() * 50)}`
+                            `سماكة البلاطة: 200 مم`
                         ]
                     };
                 case 'mep':
-                    const coolingLoad = Math.floor(floorArea * 150);
                     return {
-                        title: 'الأنظمة الميكانيكية والكهربائية',
+                        title: 'أنظمة MEP (عرض توضيحي)',
                         items: [
-                            `حمل التبريد: ${coolingLoad.toLocaleString()} واط`,
-                            `نظام التكييف: VRF مركزي`,
-                            `الحمل الكهربائي: ${Math.floor(project.totalArea * 80 / 1000)} kVA`,
-                            `عدد الروافع: ${Math.ceil(project.floors / 6) * 2 + 1}`,
-                            `خزان المياه: ${Math.floor(project.totalArea * 0.5 / 1000)} م³`
+                            `حمل التبريد: ${Math.floor(project.totalArea * 0.12)} طن`,
+                            `نظام التكييف: VRF`,
+                            `المحول: ${Math.ceil(project.totalArea * 0.08 / 100) * 100} kVA`
                         ]
                     };
                 case 'interior':
                     return {
-                        title: 'التصميم الداخلي',
+                        title: 'التصميم الداخلي (عرض توضيحي)',
                         items: [
-                            `المكاتب المفتوحة: ${Math.floor(floorArea * 0.5)} م²`,
-                            `المكاتب الخاصة: ${Math.floor(floorArea * 0.15)} م²`,
-                            `قاعات الاجتماعات: ${Math.ceil(floorArea / 200)}`,
-                            `الإضاءة: 500 لوكس للمكاتب`,
-                            `مواد التشطيب: رخام + خشب بلوط`
+                            `كفاءة المساحة: 85%`,
+                            `عدد المكاتب: ${Math.floor(project.totalArea / 15)}`
                         ]
                     };
             }
-        }
-
-        // Add output to results
-        function addOutput(agent, title, output) {
-            const outputSection = document.getElementById('outputSection');
-            const div = document.createElement('div');
-            div.className = `output-item ${agent}`;
-            div.innerHTML = `
-                <strong>${output.title}</strong>
-                <ul style="margin: 8px 0 0 20px; font-size: 13px; color: #94a3b8;">
-                    ${output.items.map(item => `<li>${item}</li>`).join('')}
-                </ul>
-            `;
-            outputSection.appendChild(div);
         }
 
         // Initialize
