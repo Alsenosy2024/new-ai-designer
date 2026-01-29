@@ -487,10 +487,10 @@
     </div>
 
     <script>
-        // Auto-detect API URL (works on localhost and Vercel)
+        // Auto-detect API URL (works on localhost, Vercel, and AWS)
         const API_URL = window.location.hostname === 'localhost'
             ? 'http://localhost:8001'
-            : '';
+            : 'https://p0hlxndk8d.execute-api.us-east-1.amazonaws.com';
         let isRunning = false;
         let currentRunId = null;
 
