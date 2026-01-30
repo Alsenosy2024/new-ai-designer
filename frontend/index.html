@@ -1,1 +1,1585 @@
-<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=evaluate.html"></head></html>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Architect Designer</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-panel: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #475569;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .brand-text {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Step Navigation */
+        .steps-nav {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-panel);
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .step-btn {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .step-btn:hover { background: rgba(255,255,255,0.05); }
+        .step-btn.active { background: var(--primary); color: white; }
+        .step-btn.completed { color: var(--success); }
+        .step-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .step-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .step-btn.active .step-num { background: rgba(255,255,255,0.2); }
+        .step-btn.completed .step-num { background: var(--success); }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--error);
+        }
+
+        .status-dot.online { background: var(--success); }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .step-content {
+            display: none;
+            flex: 1;
+        }
+
+        .step-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Step 1: Input Form */
+        .input-step {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            width: 100%;
+        }
+
+        .step-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .step-header h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .step-header p {
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group.full { grid-column: 1 / -1; }
+
+        .form-group label {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px 16px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(249,115,22,0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover { background: var(--border); }
+
+        .form-actions {
+            margin-top: 32px;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Step 2: Design Progress */
+        .progress-step {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            width: 100%;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .agent-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .agent-card.running {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(249,115,22,0.2);
+        }
+
+        .agent-card.completed {
+            border-color: var(--success);
+        }
+
+        .agent-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .agent-status {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: var(--bg-panel);
+            color: var(--text-muted);
+            display: inline-block;
+        }
+
+        .agent-status.running { background: rgba(249,115,22,0.2); color: var(--primary); }
+        .agent-status.completed { background: rgba(16,185,129,0.2); color: var(--success); }
+
+        .progress-container {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-panel);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .log-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+
+        .log-entry.info { background: rgba(59,130,246,0.1); color: #60a5fa; }
+        .log-entry.success { background: rgba(16,185,129,0.1); color: var(--success); }
+        .log-entry.error { background: rgba(239,68,68,0.1); color: var(--error); }
+
+        /* Step 3: Results Viewer */
+        .results-step {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 240px 1fr 260px;
+            grid-template-rows: auto 1fr;
+            height: calc(100vh - 64px);
+        }
+
+        .view-tabs {
+            grid-column: 1 / -1;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .view-tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .view-tab:hover { border-color: var(--primary); color: var(--text); }
+        .view-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+        .left-panel, .right-panel {
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .right-panel {
+            border-left: none;
+            border-right: 1px solid var(--border);
+        }
+
+        .panel-section {
+            margin-bottom: 24px;
+        }
+
+        .panel-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: var(--bg-panel);
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+
+        .layer-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .layer-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .layer-toggle {
+            width: 40px;
+            height: 22px;
+            background: var(--border);
+            border-radius: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .layer-toggle.active { background: var(--primary); }
+
+        .layer-toggle::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            right: 2px;
+            transition: right 0.2s;
+        }
+
+        .layer-toggle.active::after { right: 20px; }
+
+        .viewer-area {
+            background: #1a1a2e;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viewer-2d, .viewer-3d, .viewer-section, .viewer-elevation {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .viewer-2d.active, .viewer-3d.active, .viewer-section.active, .viewer-elevation.active {
+            display: block;
+        }
+
+        #svg-2d, #svg-section, #svg-elevation {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+        }
+
+        #canvas-3d {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewer-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: var(--bg-card);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .control-btn {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover { background: var(--primary); border-color: var(--primary); }
+
+        .zoom-display {
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .property-group {
+            background: var(--bg-panel);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .property-group-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .property-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .property-row:last-child { border-bottom: none; }
+        .property-label { color: var(--text-muted); }
+        .property-value { font-weight: 500; }
+
+        /* Step 4: Export */
+        .export-step {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            width: 100%;
+        }
+
+        .export-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .export-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .export-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+        }
+
+        .export-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+        }
+
+        .export-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .export-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .export-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .export-btn:hover { background: var(--primary-dark); }
+
+        .summary-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-panel);
+            border-radius: 8px;
+        }
+
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .summary-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .info-badge {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            z-index: 10;
+        }
+
+        .info-badge strong { color: var(--primary); }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .tool-btn {
+            aspect-ratio: 1;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text);
+        }
+
+        .tool-btn:hover { border-color: var(--primary); }
+        .tool-btn.active { background: var(--primary); border-color: var(--primary); }
+        .tool-icon { font-size: 18px; }
+        .tool-label { font-size: 9px; color: var(--text-muted); }
+        .tool-btn.active .tool-label { color: white; }
+
+        @media (max-width: 1024px) {
+            .results-step { grid-template-columns: 1fr; }
+            .left-panel, .right-panel { display: none; }
+            .agents-grid { grid-template-columns: repeat(2, 1fr); }
+            .export-grid { grid-template-columns: repeat(2, 1fr); }
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 640px) {
+            .steps-nav { display: none; }
+            .form-grid { grid-template-columns: 1fr; }
+            .agents-grid { grid-template-columns: 1fr; }
+            .export-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <div class="brand-icon">AI</div>
+            <span class="brand-text">Architect Designer</span>
+        </div>
+
+        <nav class="steps-nav">
+            <button class="step-btn active" data-step="input" onclick="goToStep('input')">
+                <span class="step-num">1</span>
+                المدخلات
+            </button>
+            <button class="step-btn" data-step="design" onclick="goToStep('design')" disabled>
+                <span class="step-num">2</span>
+                التصميم
+            </button>
+            <button class="step-btn" data-step="results" onclick="goToStep('results')" disabled>
+                <span class="step-num">3</span>
+                المخرجات
+            </button>
+            <button class="step-btn" data-step="export" onclick="goToStep('export')" disabled>
+                <span class="step-num">4</span>
+                التصدير
+            </button>
+        </nav>
+
+        <div class="server-status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">جاري الاتصال...</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Step 1: Input Form -->
+        <section class="step-content active" id="step-input">
+            <div class="input-step">
+                <div class="step-header">
+                    <h1>مشروع جديد</h1>
+                    <p>أدخل بيانات المشروع لبدء التصميم الذكي</p>
+                </div>
+
+                <form id="projectForm" class="form-grid">
+                    <div class="form-group">
+                        <label>اسم المشروع</label>
+                        <input type="text" id="projectName" value="مبنى المكاتب" required>
+                    </div>
+                    <div class="form-group">
+                        <label>نوع المبنى</label>
+                        <select id="buildingType">
+                            <option value="office">مكاتب</option>
+                            <option value="residential">سكني</option>
+                            <option value="retail">تجاري</option>
+                            <option value="hotel">فندق</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>المساحة الإجمالية (م²)</label>
+                        <input type="number" id="totalArea" value="5000" min="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label>عدد الطوابق</label>
+                        <input type="number" id="floors" value="10" min="1" max="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label>الموقع</label>
+                        <select id="location">
+                            <option value="riyadh">الرياض</option>
+                            <option value="jeddah">جدة</option>
+                            <option value="dubai">دبي</option>
+                            <option value="cairo">القاهرة</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>النظام الإنشائي</label>
+                        <select id="structuralSystem">
+                            <option value="concrete">خرساني</option>
+                            <option value="steel">حديدي</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <label>متطلبات إضافية</label>
+                        <textarea id="requirements" placeholder="أي متطلبات خاصة..."></textarea>
+                    </div>
+                </form>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" onclick="startDesign()" id="startBtn">
+                        بدء التصميم
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Design Progress -->
+        <section class="step-content" id="step-design">
+            <div class="progress-step">
+                <div class="step-header">
+                    <h1>جاري التصميم...</h1>
+                    <p>الوكلاء الذكيون يعملون على تصميم مشروعك</p>
+                </div>
+
+                <div class="agents-grid">
+                    <div class="agent-card" id="agent-arch">
+                        <div class="agent-icon">🏛️</div>
+                        <div class="agent-name">المعماري</div>
+                        <div class="agent-status" id="status-arch">جاهز</div>
+                    </div>
+                    <div class="agent-card" id="agent-struct">
+                        <div class="agent-icon">🏗️</div>
+                        <div class="agent-name">الإنشائي</div>
+                        <div class="agent-status" id="status-struct">جاهز</div>
+                    </div>
+                    <div class="agent-card" id="agent-mep">
+                        <div class="agent-icon">⚡</div>
+                        <div class="agent-name">MEP</div>
+                        <div class="agent-status" id="status-mep">جاهز</div>
+                    </div>
+                    <div class="agent-card" id="agent-coord">
+                        <div class="agent-icon">🔄</div>
+                        <div class="agent-name">التنسيق</div>
+                        <div class="agent-status" id="status-coord">جاهز</div>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0% - جاهز للبدء</div>
+                </div>
+
+                <div class="log-section" id="logSection">
+                    <div class="log-entry info">[نظام] جاهز للبدء</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Results Viewer -->
+        <section class="step-content" id="step-results">
+            <div class="results-step">
+                <div class="view-tabs">
+                    <button class="view-tab active" data-view="2d" onclick="switchView('2d')">2D Plan</button>
+                    <button class="view-tab" data-view="3d" onclick="switchView('3d')">3D Model</button>
+                    <button class="view-tab" data-view="section" onclick="switchView('section')">Sections</button>
+                    <button class="view-tab" data-view="elevation" onclick="switchView('elevation')">Elevations</button>
+                    <div style="flex:1"></div>
+                    <button class="btn btn-primary" onclick="goToStep('export')" style="padding: 8px 16px; font-size: 14px;">التصدير</button>
+                </div>
+
+                <aside class="right-panel">
+                    <div class="panel-section">
+                        <h3 class="panel-title">الطبقات</h3>
+                        <div class="layer-item">
+                            <div class="layer-info">
+                                <div class="layer-color" style="background: #3b82f6"></div>
+                                <span>معماري</span>
+                            </div>
+                            <div class="layer-toggle active" data-layer="architectural" onclick="toggleLayer(this)"></div>
+                        </div>
+                        <div class="layer-item">
+                            <div class="layer-info">
+                                <div class="layer-color" style="background: #ef4444"></div>
+                                <span>إنشائي</span>
+                            </div>
+                            <div class="layer-toggle active" data-layer="structural" onclick="toggleLayer(this)"></div>
+                        </div>
+                        <div class="layer-item">
+                            <div class="layer-info">
+                                <div class="layer-color" style="background: #10b981"></div>
+                                <span>MEP</span>
+                            </div>
+                            <div class="layer-toggle active" data-layer="mep" onclick="toggleLayer(this)"></div>
+                        </div>
+                        <div class="layer-item">
+                            <div class="layer-info">
+                                <div class="layer-color" style="background: #8b5cf6"></div>
+                                <span>الشبكة</span>
+                            </div>
+                            <div class="layer-toggle active" data-layer="grid" onclick="toggleLayer(this)"></div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3 class="panel-title">الأدوات</h3>
+                        <div class="tool-grid">
+                            <button class="tool-btn active"><span class="tool-icon">👆</span><span class="tool-label">اختيار</span></button>
+                            <button class="tool-btn"><span class="tool-icon">✋</span><span class="tool-label">تحريك</span></button>
+                            <button class="tool-btn"><span class="tool-icon">🔍</span><span class="tool-label">تكبير</span></button>
+                            <button class="tool-btn"><span class="tool-icon">📏</span><span class="tool-label">قياس</span></button>
+                            <button class="tool-btn"><span class="tool-icon">ℹ️</span><span class="tool-label">معلومات</span></button>
+                            <button class="tool-btn" onclick="goToStep('export')"><span class="tool-icon">📥</span><span class="tool-label">تصدير</span></button>
+                        </div>
+                    </div>
+                </aside>
+
+                <div class="viewer-area">
+                    <div class="info-badge"><strong id="viewTitle">Floor Plan</strong> - <span id="viewInfo">Scale 1:100</span></div>
+
+                    <div class="viewer-2d active" id="viewer-2d">
+                        <svg id="svg-2d" viewBox="0 0 800 600"></svg>
+                    </div>
+                    <div class="viewer-3d" id="viewer-3d">
+                        <canvas id="canvas-3d"></canvas>
+                    </div>
+                    <div class="viewer-section" id="viewer-section">
+                        <svg id="svg-section" viewBox="0 0 800 500"></svg>
+                    </div>
+                    <div class="viewer-elevation" id="viewer-elevation">
+                        <svg id="svg-elevation" viewBox="0 0 800 500"></svg>
+                    </div>
+
+                    <div class="viewer-controls">
+                        <button class="control-btn" onclick="zoomIn()">+</button>
+                        <button class="control-btn" onclick="zoomOut()">-</button>
+                        <div class="zoom-display"><span id="zoomLevel">100</span>%</div>
+                        <button class="control-btn" onclick="fitView()">⊡</button>
+                        <button class="control-btn" onclick="resetView()">↺</button>
+                    </div>
+                </div>
+
+                <aside class="left-panel">
+                    <div class="panel-section">
+                        <h3 class="panel-title">معلومات المشروع</h3>
+                        <div class="property-group">
+                            <div class="property-group-title">المبنى</div>
+                            <div class="property-row"><span class="property-label">الاسم</span><span class="property-value" id="prop-name">-</span></div>
+                            <div class="property-row"><span class="property-label">النوع</span><span class="property-value" id="prop-type">-</span></div>
+                            <div class="property-row"><span class="property-label">الطوابق</span><span class="property-value" id="prop-floors">-</span></div>
+                            <div class="property-row"><span class="property-label">المساحة</span><span class="property-value" id="prop-area">-</span></div>
+                            <div class="property-row"><span class="property-label">الارتفاع</span><span class="property-value" id="prop-height">-</span></div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3 class="panel-title">الإنشائي</h3>
+                        <div class="property-group">
+                            <div class="property-group-title">الأعمدة</div>
+                            <div class="property-row"><span class="property-label">العدد</span><span class="property-value" id="prop-columns">-</span></div>
+                            <div class="property-row"><span class="property-label">الشبكة</span><span class="property-value" id="prop-grid">-</span></div>
+                            <div class="property-row"><span class="property-label">الحجم</span><span class="property-value" id="prop-colsize">-</span></div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3 class="panel-title">MEP</h3>
+                        <div class="property-group">
+                            <div class="property-group-title">التكييف</div>
+                            <div class="property-row"><span class="property-label">النظام</span><span class="property-value" id="prop-hvac">-</span></div>
+                            <div class="property-row"><span class="property-label">القدرة</span><span class="property-value" id="prop-cooling">-</span></div>
+                            <div class="property-row"><span class="property-label">الكهرباء</span><span class="property-value" id="prop-electrical">-</span></div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <!-- Step 4: Export -->
+        <section class="step-content" id="step-export">
+            <div class="export-step">
+                <div class="step-header">
+                    <h1>تصدير المخرجات</h1>
+                    <p>حمّل ملفات التصميم بالصيغة المطلوبة</p>
+                </div>
+
+                <div class="export-grid">
+                    <div class="export-card" onclick="exportDWG()">
+                        <div class="export-icon">📐</div>
+                        <div class="export-title">DWG/DXF</div>
+                        <div class="export-desc">ملف AutoCAD للرسومات 2D</div>
+                        <button class="export-btn">تحميل</button>
+                    </div>
+                    <div class="export-card" onclick="exportPDF()">
+                        <div class="export-icon">📄</div>
+                        <div class="export-title">PDF</div>
+                        <div class="export-desc">مجموعة الرسومات للطباعة</div>
+                        <button class="export-btn">تحميل</button>
+                    </div>
+                    <div class="export-card" onclick="exportIFC()">
+                        <div class="export-icon">🏗️</div>
+                        <div class="export-title">IFC</div>
+                        <div class="export-desc">نموذج BIM للـ Revit</div>
+                        <button class="export-btn">تحميل</button>
+                    </div>
+                    <div class="export-card" onclick="exportSchedules()">
+                        <div class="export-icon">📋</div>
+                        <div class="export-title">الجداول</div>
+                        <div class="export-desc">جداول الغرف والأعمدة</div>
+                        <button class="export-btn">تحميل</button>
+                    </div>
+                    <div class="export-card" onclick="exportBOQ()">
+                        <div class="export-icon">📊</div>
+                        <div class="export-title">BOQ</div>
+                        <div class="export-desc">حصر الكميات والتكلفة</div>
+                        <button class="export-btn">تحميل</button>
+                    </div>
+                    <div class="export-card" onclick="exportAll()">
+                        <div class="export-icon">📦</div>
+                        <div class="export-title">الكل</div>
+                        <div class="export-desc">جميع الملفات في ZIP</div>
+                        <button class="export-btn">تحميل</button>
+                    </div>
+                </div>
+
+                <div class="summary-section">
+                    <h3 style="margin-bottom: 16px;">ملخص المشروع</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-value" id="sum-area">-</div>
+                            <div class="summary-label">المساحة (م²)</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="sum-floors">-</div>
+                            <div class="summary-label">الطوابق</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="sum-columns">-</div>
+                            <div class="summary-label">الأعمدة</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-value" id="sum-cooling">-</div>
+                            <div class="summary-label">التبريد (طن)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 32px;">
+                    <button class="btn btn-secondary" onclick="goToStep('results')" style="margin-left: 16px;">
+                        العودة للمخرجات
+                    </button>
+                    <button class="btn btn-primary" onclick="startNewProject()">
+                        مشروع جديد
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:8001'
+            : 'https://p0hlxndk8d.execute-api.us-east-1.amazonaws.com';
+
+        let currentStep = 'input';
+        let designData = null;
+        let projectData = null;
+        let scene, camera, renderer, controls;
+        let zoomLevel = 100;
+        let layers = { architectural: true, structural: true, mep: true, grid: true };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkServer();
+            setInterval(checkServer, 30000);
+        });
+
+        async function checkServer() {
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                if (response.ok) {
+                    document.getElementById('statusDot').classList.add('online');
+                    document.getElementById('statusText').textContent = 'متصل';
+                    return true;
+                }
+            } catch (e) {}
+            document.getElementById('statusDot').classList.remove('online');
+            document.getElementById('statusText').textContent = 'غير متصل';
+            return false;
+        }
+
+        function goToStep(step) {
+            const btn = document.querySelector(`.step-btn[data-step="${step}"]`);
+            if (btn && btn.disabled) return;
+
+            currentStep = step;
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.step-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`step-${step}`).classList.add('active');
+            document.querySelector(`.step-btn[data-step="${step}"]`).classList.add('active');
+
+            if (step === 'results' && designData) {
+                setTimeout(() => {
+                    render2DPlan();
+                    renderSection();
+                    renderElevation();
+                    if (!scene) init3DViewer();
+                }, 100);
+            }
+        }
+
+        function enableStep(step) {
+            const btn = document.querySelector(`.step-btn[data-step="${step}"]`);
+            if (btn) btn.disabled = false;
+        }
+
+        function completeStep(step) {
+            const btn = document.querySelector(`.step-btn[data-step="${step}"]`);
+            if (btn) btn.classList.add('completed');
+        }
+
+        async function startDesign() {
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.textContent = 'جاري البدء...';
+
+            projectData = {
+                name: document.getElementById('projectName').value,
+                type: document.getElementById('buildingType').value,
+                floors: document.getElementById('floors').value,
+                gfa: document.getElementById('totalArea').value,
+                region: document.getElementById('location').value
+            };
+
+            completeStep('input');
+            enableStep('design');
+            goToStep('design');
+
+            await runDesignPipeline();
+        }
+
+        async function runDesignPipeline() {
+            addLog('بدء عملية التصميم...', 'info');
+            updateProgress(5, 'إنشاء المشروع...');
+
+            try {
+                updateAgent('arch', 'running', 'يعمل...');
+                await fetch(`${API_URL}/api/state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project: projectData })
+                });
+                updateProgress(15, 'تم إنشاء المشروع');
+                addLog('تم إنشاء المشروع بنجاح', 'success');
+
+                updateProgress(20, 'بدء التصميم...');
+                await fetch(`${API_URL}/api/runs/start`, { method: 'POST' });
+                addLog('بدء تشغيل الوكلاء', 'info');
+
+                await simulateProgress();
+
+                updateProgress(90, 'جاري تحميل النتائج...');
+                const dataResponse = await fetch(`${API_URL}/api/design/data`);
+                if (dataResponse.ok) {
+                    designData = await dataResponse.json();
+                    addLog('تم استلام بيانات التصميم', 'success');
+                } else {
+                    designData = getDemoData();
+                    addLog('استخدام البيانات التجريبية', 'info');
+                }
+
+                updateProgress(100, 'اكتمل التصميم!');
+                updateAgent('coord', 'completed', 'مكتمل');
+                addLog('اكتمل التصميم بنجاح!', 'success');
+
+                completeStep('design');
+                enableStep('results');
+                enableStep('export');
+
+                updatePropertiesPanel();
+                updateSummary();
+
+                setTimeout(() => goToStep('results'), 1500);
+
+            } catch (error) {
+                addLog(`خطأ: ${error.message}`, 'error');
+                designData = getDemoData();
+                completeStep('design');
+                enableStep('results');
+                enableStep('export');
+                updatePropertiesPanel();
+                updateSummary();
+                setTimeout(() => goToStep('results'), 1500);
+            }
+        }
+
+        async function simulateProgress() {
+            const steps = [
+                { progress: 30, agent: 'arch', status: 'completed', msg: 'اكتمل التصميم المعماري' },
+                { progress: 40, agent: 'struct', status: 'running', msg: 'بدء التصميم الإنشائي...' },
+                { progress: 55, agent: 'struct', status: 'completed', msg: 'اكتمل تصميم الأعمدة' },
+                { progress: 65, agent: 'mep', status: 'running', msg: 'بدء تصميم MEP...' },
+                { progress: 75, agent: 'mep', status: 'completed', msg: 'اكتمل تصميم التكييف' },
+                { progress: 85, agent: 'coord', status: 'running', msg: 'التنسيق بين الأنظمة...' }
+            ];
+
+            for (const step of steps) {
+                await sleep(800);
+                updateProgress(step.progress, step.msg);
+                updateAgent(step.agent, step.status, step.status === 'running' ? 'يعمل...' : 'مكتمل');
+                addLog(step.msg, step.status === 'completed' ? 'success' : 'info');
+            }
+        }
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progressFill').style.width = `${percent}%`;
+            document.getElementById('progressText').textContent = `${percent}% - ${text}`;
+        }
+
+        function updateAgent(agent, status, text) {
+            const card = document.getElementById(`agent-${agent}`);
+            const statusEl = document.getElementById(`status-${agent}`);
+            card.className = `agent-card ${status}`;
+            statusEl.className = `agent-status ${status}`;
+            statusEl.textContent = text;
+        }
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('logSection');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString('ar-SA')}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updatePropertiesPanel() {
+            if (!designData) return;
+            const arch = designData.architectural;
+            const struct = designData.structural;
+            const mep = designData.mep;
+
+            document.getElementById('prop-name').textContent = projectData?.name || '-';
+            document.getElementById('prop-type').textContent = projectData?.type || '-';
+            document.getElementById('prop-floors').textContent = arch.massing.floors;
+            document.getElementById('prop-area').textContent = `${arch.massing.total_area.toLocaleString()} م²`;
+            document.getElementById('prop-height').textContent = `${arch.massing.height} م`;
+            document.getElementById('prop-columns').textContent = struct.columns.length;
+            document.getElementById('prop-grid').textContent = `${struct.grid.bay_x}×${struct.grid.bay_y} م`;
+            document.getElementById('prop-colsize').textContent = `${struct.columns[0]?.size[0]}×${struct.columns[0]?.size[1]} مم`;
+            document.getElementById('prop-hvac').textContent = mep.hvac.system_type.replace('_', ' ');
+            document.getElementById('prop-cooling').textContent = `${Math.round(mep.hvac.total_cooling_ton)} طن`;
+            document.getElementById('prop-electrical').textContent = `${Math.round(mep.electrical.total_connected_kW)} kW`;
+        }
+
+        function updateSummary() {
+            if (!designData) return;
+            document.getElementById('sum-area').textContent = designData.architectural.massing.total_area.toLocaleString();
+            document.getElementById('sum-floors').textContent = designData.architectural.massing.floors;
+            document.getElementById('sum-columns').textContent = designData.structural.columns.length;
+            document.getElementById('sum-cooling').textContent = Math.round(designData.mep.hvac.total_cooling_ton);
+        }
+
+        function switchView(view) {
+            document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.view-tab[data-view="${view}"]`).classList.add('active');
+
+            document.querySelectorAll('.viewer-2d, .viewer-3d, .viewer-section, .viewer-elevation').forEach(v => v.classList.remove('active'));
+            document.getElementById(`viewer-${view}`).classList.add('active');
+
+            const titles = { '2d': 'Floor Plan', '3d': '3D Model', 'section': 'Section', 'elevation': 'Elevation' };
+            document.getElementById('viewTitle').textContent = titles[view];
+        }
+
+        function toggleLayer(el) {
+            el.classList.toggle('active');
+            layers[el.dataset.layer] = el.classList.contains('active');
+            render2DPlan();
+            update3DLayers();
+        }
+
+        function render2DPlan() {
+            if (!designData) return;
+            const svg = document.getElementById('svg-2d');
+            const arch = designData.architectural;
+            const struct = designData.structural;
+
+            const scale = 12;
+            const ox = 80, oy = 80;
+            const w = arch.massing.width * scale;
+            const d = arch.massing.depth * scale;
+
+            let content = `<rect width="100%" height="100%" fill="#fff"/>`;
+
+            if (layers.grid) {
+                content += `<g stroke="#8b5cf6" stroke-width="0.5" stroke-dasharray="4,4" opacity="0.6">`;
+                for (let i = 0; i <= struct.grid.columns_x; i++) {
+                    const x = ox + i * struct.grid.bay_x * scale;
+                    content += `<line x1="${x}" y1="${oy-20}" x2="${x}" y2="${oy+d+20}"/>`;
+                    content += `<text x="${x}" y="${oy-30}" fill="#8b5cf6" font-size="11" text-anchor="middle">${String.fromCharCode(65+i)}</text>`;
+                }
+                for (let j = 0; j <= struct.grid.columns_y; j++) {
+                    const y = oy + j * struct.grid.bay_y * scale;
+                    content += `<line x1="${ox-20}" y1="${y}" x2="${ox+w+20}" y2="${y}"/>`;
+                    content += `<text x="${ox-30}" y="${y+4}" fill="#8b5cf6" font-size="11" text-anchor="middle">${j+1}</text>`;
+                }
+                content += '</g>';
+            }
+
+            if (layers.architectural) {
+                content += `<rect x="${ox}" y="${oy}" width="${w}" height="${d}" fill="none" stroke="#3b82f6" stroke-width="2"/>`;
+                const cs = arch.core.side * scale;
+                content += `<rect x="${ox+(w-cs)/2}" y="${oy+(d-cs)/2}" width="${cs}" height="${cs}" fill="#e2e8f0" stroke="#64748b"/>`;
+                content += `<text x="${ox+w/2}" y="${oy+d/2+4}" fill="#64748b" font-size="10" text-anchor="middle">CORE</text>`;
+            }
+
+            if (layers.structural) {
+                struct.columns.forEach(col => {
+                    const sz = col.size[0]/1000 * scale;
+                    const cx = ox + col.position[0] * scale;
+                    const cy = oy + col.position[1] * scale;
+                    content += `<rect x="${cx-sz/2}" y="${cy-sz/2}" width="${sz}" height="${sz}" fill="#ef4444" stroke="#b91c1c"/>`;
+                });
+            }
+
+            content += `<line x1="${ox}" y1="${oy+d+40}" x2="${ox+w}" y2="${oy+d+40}" stroke="#000" stroke-width="1"/>`;
+            content += `<text x="${ox+w/2}" y="${oy+d+55}" fill="#000" font-size="11" text-anchor="middle">${arch.massing.width.toFixed(1)}m</text>`;
+            content += `<line x1="${ox+w+40}" y1="${oy}" x2="${ox+w+40}" y2="${oy+d}" stroke="#000" stroke-width="1"/>`;
+            content += `<text x="${ox+w+50}" y="${oy+d/2}" fill="#000" font-size="11" text-anchor="middle" transform="rotate(90,${ox+w+50},${oy+d/2})">${arch.massing.depth.toFixed(1)}m</text>`;
+            content += `<polygon points="${ox+w+60},${oy+10} ${ox+w+55},${oy+25} ${ox+w+65},${oy+25}" fill="#000"/>`;
+            content += `<text x="${ox+w+60}" y="${oy+38}" fill="#000" font-size="10" text-anchor="middle">N</text>`;
+
+            svg.innerHTML = content;
+            svg.setAttribute('viewBox', `0 0 ${w+180} ${d+180}`);
+        }
+
+        function renderSection() {
+            if (!designData) return;
+            const svg = document.getElementById('svg-section');
+            const arch = designData.architectural;
+            const scale = 10;
+            const ox = 80, oy = 40;
+            const w = arch.massing.width * scale;
+            const h = arch.massing.height * scale;
+            const fh = h / arch.massing.floors;
+
+            let content = `<rect width="100%" height="100%" fill="#fff"/>`;
+            content += `<line x1="0" y1="${oy+h}" x2="${w+160}" y2="${oy+h}" stroke="#000" stroke-width="2"/>`;
+            content += `<rect x="0" y="${oy+h}" width="${w+160}" height="20" fill="#e5e7eb"/>`;
+            content += `<rect x="${ox}" y="${oy}" width="${w}" height="${h}" fill="#f8fafc" stroke="#000" stroke-width="2"/>`;
+
+            for (let i = 0; i <= arch.massing.floors; i++) {
+                const y = oy + h - i * fh;
+                content += `<rect x="${ox}" y="${y-3}" width="${w}" height="6" fill="#94a3b8"/>`;
+                if (i < arch.massing.floors) {
+                    content += `<text x="${ox-10}" y="${y-fh/2+4}" fill="#64748b" font-size="9" text-anchor="end">L${i+1}</text>`;
+                }
+            }
+
+            const cw = arch.core.side * scale;
+            content += `<rect x="${ox+(w-cw)/2}" y="${oy}" width="${cw}" height="${h}" fill="#cbd5e1" stroke="#64748b"/>`;
+            content += `<line x1="${ox+w+30}" y1="${oy}" x2="${ox+w+30}" y2="${oy+h}" stroke="#000"/>`;
+            content += `<text x="${ox+w+40}" y="${oy+h/2}" fill="#000" font-size="11" text-anchor="start">${arch.massing.height.toFixed(1)}m</text>`;
+            content += `<text x="${ox+w/2}" y="25" fill="#000" font-size="12" font-weight="bold" text-anchor="middle">SECTION A-A</text>`;
+
+            svg.innerHTML = content;
+            svg.setAttribute('viewBox', `0 0 ${w+160} ${h+80}`);
+        }
+
+        function renderElevation() {
+            if (!designData) return;
+            const svg = document.getElementById('svg-elevation');
+            const arch = designData.architectural;
+            const scale = 10;
+            const ox = 80, oy = 40;
+            const w = arch.massing.width * scale;
+            const h = arch.massing.height * scale;
+            const fh = h / arch.massing.floors;
+
+            let content = `<rect width="100%" height="100%" fill="#fff"/>`;
+            content += `<line x1="0" y1="${oy+h}" x2="${w+160}" y2="${oy+h}" stroke="#000" stroke-width="2"/>`;
+            content += `<rect x="${ox}" y="${oy}" width="${w}" height="${h}" fill="#e2e8f0" stroke="#333" stroke-width="2"/>`;
+
+            const ww = w * 0.1;
+            const wh = fh * 0.5;
+            for (let f = 0; f < arch.massing.floors; f++) {
+                const fy = oy + h - (f+1) * fh + fh * 0.25;
+                for (let i = 0; i < 5; i++) {
+                    const wx = ox + w * 0.1 + i * (w * 0.18);
+                    content += `<rect x="${wx}" y="${fy}" width="${ww}" height="${wh}" fill="#7dd3fc" stroke="#0284c7"/>`;
+                }
+            }
+
+            content += `<text x="${ox+w/2}" y="25" fill="#000" font-size="12" font-weight="bold" text-anchor="middle">NORTH ELEVATION</text>`;
+
+            svg.innerHTML = content;
+            svg.setAttribute('viewBox', `0 0 ${w+160} ${h+80}`);
+        }
+
+        function init3DViewer() {
+            if (!designData || scene) return;
+
+            const canvas = document.getElementById('canvas-3d');
+            const container = document.getElementById('viewer-3d');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(80, 60, 80);
+
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.target.set(0, 20, 0);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+            directional.position.set(50, 100, 50);
+            scene.add(directional);
+
+            scene.add(new THREE.GridHelper(100, 20, 0x8b5cf6, 0x334155));
+
+            build3DModel();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        function build3DModel() {
+            if (!designData) return;
+            const arch = designData.architectural;
+            const struct = designData.structural;
+
+            const buildingGeom = new THREE.BoxGeometry(arch.massing.width, arch.massing.height, arch.massing.depth);
+            const buildingMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.3 });
+            const building = new THREE.Mesh(buildingGeom, buildingMat);
+            building.position.y = arch.massing.height / 2;
+            building.userData = { layer: 'architectural' };
+            scene.add(building);
+
+            const coreGeom = new THREE.BoxGeometry(arch.core.side, arch.massing.height, arch.core.side);
+            const coreMat = new THREE.MeshPhongMaterial({ color: 0x64748b });
+            const core = new THREE.Mesh(coreGeom, coreMat);
+            core.position.y = arch.massing.height / 2;
+            core.userData = { layer: 'architectural' };
+            scene.add(core);
+
+            const colGeom = new THREE.BoxGeometry(0.4, arch.massing.height, 0.4);
+            const colMat = new THREE.MeshPhongMaterial({ color: 0xef4444 });
+            struct.columns.forEach(col => {
+                const column = new THREE.Mesh(colGeom, colMat);
+                column.position.set(
+                    col.position[0] - arch.massing.width/2,
+                    arch.massing.height / 2,
+                    col.position[1] - arch.massing.depth/2
+                );
+                column.userData = { layer: 'structural' };
+                scene.add(column);
+            });
+
+            for (let i = 0; i <= arch.massing.floors; i++) {
+                const slabGeom = new THREE.BoxGeometry(arch.massing.width, 0.25, arch.massing.depth);
+                const slabMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8 });
+                const slab = new THREE.Mesh(slabGeom, slabMat);
+                slab.position.y = i * (arch.massing.height / arch.massing.floors);
+                slab.userData = { layer: 'structural' };
+                scene.add(slab);
+            }
+        }
+
+        function update3DLayers() {
+            if (!scene) return;
+            scene.traverse(obj => {
+                if (obj.userData?.layer) {
+                    obj.visible = layers[obj.userData.layer];
+                }
+            });
+        }
+
+        function zoomIn() {
+            zoomLevel = Math.min(400, zoomLevel + 25);
+            document.getElementById('zoomLevel').textContent = zoomLevel;
+        }
+
+        function zoomOut() {
+            zoomLevel = Math.max(25, zoomLevel - 25);
+            document.getElementById('zoomLevel').textContent = zoomLevel;
+        }
+
+        function fitView() {
+            zoomLevel = 100;
+            document.getElementById('zoomLevel').textContent = zoomLevel;
+        }
+
+        function resetView() {
+            fitView();
+            if (controls) controls.reset();
+        }
+
+        async function exportDWG() {
+            try {
+                const response = await fetch(`${API_URL}/api/export/dwg`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.content_base64) {
+                        const binary = atob(data.content_base64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        downloadBlob(new Blob([bytes], { type: 'application/dxf' }), data.filename);
+                        alert(`تم تحميل: ${data.filename}`);
+                    }
+                }
+            } catch (e) {
+                alert('خطأ في التصدير');
+            }
+        }
+
+        function exportPDF() { window.print(); }
+
+        function exportIFC() { alert('جاري إنشاء ملف IFC...'); }
+
+        async function exportSchedules() {
+            try {
+                const [rooms, columns] = await Promise.all([
+                    fetch(`${API_URL}/api/schedules/rooms`).then(r => r.json()),
+                    fetch(`${API_URL}/api/schedules/columns`).then(r => r.json())
+                ]);
+                alert(`جداول المشروع:\n\nالغرف: ${rooms.total_spaces}\nالأعمدة: ${columns.total_columns}`);
+            } catch (e) {
+                alert('خطأ في تحميل الجداول');
+            }
+        }
+
+        async function exportBOQ() {
+            try {
+                const [cost, boq] = await Promise.all([
+                    fetch(`${API_URL}/api/cost/estimate`).then(r => r.json()),
+                    fetch(`${API_URL}/api/export/boq`).then(r => r.json())
+                ]);
+                alert(`تقدير التكلفة:\n\nالإجمالي: ${cost.grand_total_SAR.toLocaleString()} ر.س\nللمتر: ${cost.cost_per_m2_SAR.toLocaleString()} ر.س/م²`);
+            } catch (e) {
+                alert('خطأ في تحميل BOQ');
+            }
+        }
+
+        function exportAll() { alert('جاري تجهيز جميع الملفات...'); }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function startNewProject() {
+            if (confirm('هل تريد بدء مشروع جديد؟')) location.reload();
+        }
+
+        function getDemoData() {
+            return {
+                architectural: {
+                    massing: { width: 31, depth: 40.3, height: 36, floors: 10, floor_height: 3.6, total_area: 12493 },
+                    core: { area: 225, side: 15 },
+                    spaces: [],
+                    efficiency: 72,
+                    facade: { wwr_north: 0.4, wwr_south: 0.35 }
+                },
+                structural: {
+                    system: 'braced_frame',
+                    material: 'concrete',
+                    grid: { bay_x: 7.75, bay_y: 8.06, columns_x: 5, columns_y: 6 },
+                    columns: Array.from({length: 30}, (_, i) => ({
+                        id: `C${i+1}`,
+                        position: [(i % 5) * 7.75, Math.floor(i / 5) * 8.06],
+                        size: [400, 400],
+                        utilization: 0.72
+                    })),
+                    slab: { thickness_mm: 250 }
+                },
+                mep: {
+                    hvac: { system_type: 'Chiller_AHU', total_cooling_kW: 850, total_cooling_ton: 242 },
+                    electrical: { total_connected_kW: 580 },
+                    plumbing: { fixture_count: 120 }
+                }
+            };
+        }
+    </script>
+</body>
+</html>
