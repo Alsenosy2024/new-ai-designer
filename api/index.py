@@ -752,5 +752,605 @@ async def get_agents_status():
     }
 
 
+# ============================================================================
+# DRAWING GENERATION ENDPOINTS
+# ============================================================================
+
+@app.get("/api/drawings/plan")
+async def get_floor_plan(floor: int = 0, include_dimensions: bool = True, include_grid: bool = True):
+    """Generate SVG floor plan with dimensions and grid"""
+    if storage["design_data"] is None:
+        raise HTTPException(status_code=404, detail="No design data available")
+
+    arch = storage["design_data"]["architectural"]
+    struct = storage["design_data"]["structural"]
+
+    width = arch["massing"]["width"]
+    depth = arch["massing"]["depth"]
+    scale = 20  # pixels per meter
+    margin = 100
+
+    svg_width = width * scale + margin * 2
+    svg_height = depth * scale + margin * 2
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {svg_width} {svg_height}" width="{svg_width}" height="{svg_height}">
+    <defs>
+        <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+        </pattern>
+    </defs>
+
+    <!-- Background grid -->
+    <rect width="100%" height="100%" fill="#fff"/>
+    <rect x="{margin}" y="{margin}" width="{width*scale}" height="{depth*scale}" fill="url(#grid)" stroke="#ccc"/>
+
+    <!-- Building outline -->
+    <rect x="{margin}" y="{margin}" width="{width*scale}" height="{depth*scale}" fill="none" stroke="#000" stroke-width="2"/>
+
+    <!-- Core -->
+    <rect x="{margin + (width/2 - arch['core']['side']/2)*scale}"
+          y="{margin + (depth/2 - arch['core']['side']/2)*scale}"
+          width="{arch['core']['side']*scale}"
+          height="{arch['core']['side']*scale}"
+          fill="#e0e0e0" stroke="#666" stroke-width="1.5"/>
+    <text x="{margin + width*scale/2}" y="{margin + depth*scale/2}"
+          text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#666">CORE</text>
+    '''
+
+    # Add structural grid
+    if include_grid:
+        grid = struct["grid"]
+        for i in range(grid["columns_x"]):
+            x = margin + i * grid["bay_x"] * scale
+            svg += f'''<line x1="{x}" y1="{margin - 30}" x2="{x}" y2="{margin + depth*scale + 30}"
+                        stroke="#0066cc" stroke-width="0.5" stroke-dasharray="5,3"/>'''
+            svg += f'''<text x="{x}" y="{margin - 40}" text-anchor="middle" font-size="12" fill="#0066cc">{chr(65+i)}</text>'''
+
+        for j in range(grid["columns_y"]):
+            y = margin + j * grid["bay_y"] * scale
+            svg += f'''<line x1="{margin - 30}" y1="{y}" x2="{margin + width*scale + 30}" y2="{y}"
+                        stroke="#0066cc" stroke-width="0.5" stroke-dasharray="5,3"/>'''
+            svg += f'''<text x="{margin - 40}" y="{y + 4}" text-anchor="middle" font-size="12" fill="#0066cc">{j+1}</text>'''
+
+    # Add columns
+    for col in struct["columns"]:
+        cx = margin + col["position"][0] * scale
+        cy = margin + col["position"][1] * scale
+        size = col["size"][0] / 1000 * scale  # Convert mm to m then scale
+        svg += f'''<rect x="{cx - size/2}" y="{cy - size/2}" width="{size}" height="{size}"
+                   fill="#333" stroke="#000" stroke-width="1">
+                   <title>{col['id']}: {col['size'][0]}x{col['size'][1]}mm</title></rect>'''
+
+    # Add dimensions
+    if include_dimensions:
+        # Width dimension
+        svg += f'''<line x1="{margin}" y1="{margin - 60}" x2="{margin + width*scale}" y2="{margin - 60}"
+                   stroke="#000" stroke-width="1"/>
+                   <line x1="{margin}" y1="{margin - 65}" x2="{margin}" y2="{margin - 55}" stroke="#000" stroke-width="1"/>
+                   <line x1="{margin + width*scale}" y1="{margin - 65}" x2="{margin + width*scale}" y2="{margin - 55}" stroke="#000" stroke-width="1"/>
+                   <text x="{margin + width*scale/2}" y="{margin - 70}" text-anchor="middle" font-size="12">{width:.1f}m</text>'''
+
+        # Depth dimension
+        svg += f'''<line x1="{margin - 60}" y1="{margin}" x2="{margin - 60}" y2="{margin + depth*scale}"
+                   stroke="#000" stroke-width="1"/>
+                   <line x1="{margin - 65}" y1="{margin}" x2="{margin - 55}" y2="{margin}" stroke="#000" stroke-width="1"/>
+                   <line x1="{margin - 65}" y1="{margin + depth*scale}" x2="{margin - 55}" y2="{margin + depth*scale}" stroke="#000" stroke-width="1"/>
+                   <text x="{margin - 70}" y="{margin + depth*scale/2}" text-anchor="middle" font-size="12"
+                         transform="rotate(-90, {margin - 70}, {margin + depth*scale/2})">{depth:.1f}m</text>'''
+
+    # Add scale bar
+    svg += f'''<line x1="{margin}" y1="{margin + depth*scale + 60}" x2="{margin + 5*scale}" y2="{margin + depth*scale + 60}"
+               stroke="#000" stroke-width="2"/>
+               <text x="{margin + 2.5*scale}" y="{margin + depth*scale + 80}" text-anchor="middle" font-size="10">5m</text>'''
+
+    # Add north arrow
+    svg += f'''<polygon points="{svg_width - 40},{margin + 10} {svg_width - 45},{margin + 30} {svg_width - 35},{margin + 30}"
+               fill="#000"/>
+               <text x="{svg_width - 40}" y="{margin + 45}" text-anchor="middle" font-size="12">N</text>'''
+
+    svg += '</svg>'
+
+    return {"svg": svg, "width": svg_width, "height": svg_height}
+
+
+@app.get("/api/drawings/section")
+async def get_section(direction: str = "longitudinal"):
+    """Generate SVG building section"""
+    if storage["design_data"] is None:
+        raise HTTPException(status_code=404, detail="No design data available")
+
+    arch = storage["design_data"]["architectural"]
+    struct = storage["design_data"]["structural"]
+    mep = storage["design_data"]["mep"]
+
+    width = arch["massing"]["width"] if direction == "longitudinal" else arch["massing"]["depth"]
+    height = arch["massing"]["height"]
+    floors = arch["massing"]["floors"]
+    floor_height = arch["massing"]["floor_height"]
+    slab_thickness = struct["slab"]["thickness_mm"] / 1000
+
+    scale = 20
+    margin = 80
+
+    svg_width = width * scale + margin * 2
+    svg_height = height * scale + margin * 2 + 60  # Extra for foundation
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {svg_width} {svg_height}" width="{svg_width}" height="{svg_height}">
+    <rect width="100%" height="100%" fill="#fff"/>
+
+    <!-- Ground line -->
+    <line x1="0" y1="{svg_height - margin}" x2="{svg_width}" y2="{svg_height - margin}" stroke="#000" stroke-width="2"/>
+    <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse">
+        <line x1="0" y1="10" x2="10" y2="0" stroke="#666" stroke-width="0.5"/>
+    </pattern>
+    <rect x="0" y="{svg_height - margin}" width="{svg_width}" height="40" fill="url(#hatch)"/>
+    '''
+
+    # Draw building outline
+    svg += f'''<rect x="{margin}" y="{svg_height - margin - height*scale}"
+                width="{width*scale}" height="{height*scale}" fill="#f5f5f5" stroke="#000" stroke-width="2"/>'''
+
+    # Draw floor slabs
+    for i in range(floors + 1):
+        y = svg_height - margin - i * floor_height * scale
+        svg += f'''<rect x="{margin}" y="{y - slab_thickness*scale}"
+                   width="{width*scale}" height="{slab_thickness*scale}" fill="#999" stroke="#000" stroke-width="1"/>'''
+
+        # Floor label
+        if i < floors:
+            svg += f'''<text x="{margin - 10}" y="{y - floor_height*scale/2}"
+                       text-anchor="end" font-size="10">L{i+1}</text>'''
+
+    # Draw columns (section cut)
+    grid = struct["grid"]
+    col_count = grid["columns_x"] if direction == "longitudinal" else grid["columns_y"]
+    bay = grid["bay_x"] if direction == "longitudinal" else grid["bay_y"]
+
+    for i in range(col_count):
+        x = margin + i * bay * scale
+        col_width = 0.4 * scale  # Typical column width
+        for f in range(floors):
+            y_base = svg_height - margin - f * floor_height * scale
+            y_top = y_base - floor_height * scale + slab_thickness * scale
+            svg += f'''<rect x="{x - col_width/2}" y="{y_top}"
+                       width="{col_width}" height="{floor_height*scale - slab_thickness*scale}"
+                       fill="#333" stroke="#000"/>'''
+
+    # Draw core
+    core_width = arch["core"]["side"] * scale
+    core_x = margin + (width/2 - arch["core"]["side"]/2) * scale
+    svg += f'''<rect x="{core_x}" y="{svg_height - margin - height*scale}"
+               width="{core_width}" height="{height*scale}" fill="#ddd" stroke="#666" stroke-width="1"/>
+               <text x="{core_x + core_width/2}" y="{svg_height - margin - height*scale/2}"
+               text-anchor="middle" font-size="10" fill="#666">CORE</text>'''
+
+    # Height dimension
+    svg += f'''<line x1="{svg_width - margin + 20}" y1="{svg_height - margin}"
+                     x2="{svg_width - margin + 20}" y2="{svg_height - margin - height*scale}"
+               stroke="#000" stroke-width="1"/>
+               <text x="{svg_width - margin + 30}" y="{svg_height - margin - height*scale/2}"
+               text-anchor="start" font-size="12">{height:.1f}m</text>'''
+
+    # Floor heights
+    for i in range(floors):
+        y = svg_height - margin - i * floor_height * scale
+        svg += f'''<text x="{svg_width - margin + 10}" y="{y - floor_height*scale/2 + 4}"
+                   text-anchor="start" font-size="9">{floor_height}m</text>'''
+
+    svg += '</svg>'
+
+    return {"svg": svg, "width": svg_width, "height": svg_height, "direction": direction}
+
+
+@app.get("/api/drawings/elevation")
+async def get_elevation(side: str = "north"):
+    """Generate SVG building elevation"""
+    if storage["design_data"] is None:
+        raise HTTPException(status_code=404, detail="No design data available")
+
+    arch = storage["design_data"]["architectural"]
+
+    # Determine which dimension to show based on side
+    if side in ["north", "south"]:
+        width = arch["massing"]["width"]
+        wwr = arch["facade"].get(f"wwr_{side}", 0.35)
+    else:
+        width = arch["massing"]["depth"]
+        wwr = arch["facade"].get(f"wwr_{side}", 0.30)
+
+    height = arch["massing"]["height"]
+    floors = arch["massing"]["floors"]
+    floor_height = arch["massing"]["floor_height"]
+
+    scale = 20
+    margin = 80
+
+    svg_width = width * scale + margin * 2
+    svg_height = height * scale + margin * 2 + 40
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {svg_width} {svg_height}" width="{svg_width}" height="{svg_height}">
+    <rect width="100%" height="100%" fill="#fff"/>
+
+    <!-- Ground line -->
+    <line x1="0" y1="{svg_height - margin}" x2="{svg_width}" y2="{svg_height - margin}" stroke="#000" stroke-width="2"/>
+
+    <!-- Building facade -->
+    <rect x="{margin}" y="{svg_height - margin - height*scale}"
+          width="{width*scale}" height="{height*scale}" fill="#e8e8e8" stroke="#333" stroke-width="2"/>
+    '''
+
+    # Draw windows for each floor
+    window_height = floor_height * 0.5 * scale
+    window_bottom_offset = floor_height * 0.15 * scale
+
+    for f in range(floors):
+        floor_y = svg_height - margin - (f + 1) * floor_height * scale
+        window_y = floor_y + floor_height * scale - window_height - window_bottom_offset
+
+        # Calculate window widths based on WWR
+        num_windows = max(2, int(width / 3))
+        window_width_total = width * scale * wwr
+        window_width = window_width_total / num_windows
+        window_spacing = (width * scale - window_width_total) / (num_windows + 1)
+
+        for w in range(num_windows):
+            window_x = margin + window_spacing * (w + 1) + window_width * w
+            svg += f'''<rect x="{window_x}" y="{window_y}"
+                       width="{window_width}" height="{window_height}"
+                       fill="#87CEEB" stroke="#333" stroke-width="1"/>'''
+
+        # Floor line
+        svg += f'''<line x1="{margin}" y1="{floor_y + floor_height*scale}"
+                   x2="{margin + width*scale}" y2="{floor_y + floor_height*scale}"
+                   stroke="#999" stroke-width="0.5" stroke-dasharray="3,3"/>'''
+
+    # Title
+    svg += f'''<text x="{svg_width/2}" y="30" text-anchor="middle" font-size="14" font-weight="bold">
+               {side.upper()} ELEVATION</text>'''
+
+    # Dimensions
+    svg += f'''<text x="{margin + width*scale/2}" y="{svg_height - margin + 30}"
+               text-anchor="middle" font-size="12">{width:.1f}m</text>
+               <text x="{svg_width - margin + 30}" y="{svg_height - margin - height*scale/2}"
+               text-anchor="start" font-size="12">{height:.1f}m</text>'''
+
+    svg += '</svg>'
+
+    return {"svg": svg, "width": svg_width, "height": svg_height, "side": side, "wwr": wwr}
+
+
+@app.get("/api/export/dwg")
+async def export_dwg():
+    """Generate DXF file (AutoCAD compatible)"""
+    if storage["design_data"] is None:
+        raise HTTPException(status_code=404, detail="No design data available")
+
+    try:
+        import ezdxf
+        from ezdxf import units
+    except ImportError:
+        return {"error": "ezdxf not installed", "message": "DXF export requires ezdxf library"}
+
+    arch = storage["design_data"]["architectural"]
+    struct = storage["design_data"]["structural"]
+
+    # Create new DXF document
+    doc = ezdxf.new('R2018')
+    doc.units = units.M
+
+    msp = doc.modelspace()
+
+    # Create layers
+    doc.layers.add('WALLS', color=7)
+    doc.layers.add('COLUMNS', color=1)
+    doc.layers.add('GRID', color=5)
+    doc.layers.add('CORE', color=8)
+    doc.layers.add('DIMENSIONS', color=2)
+    doc.layers.add('TEXT', color=7)
+
+    width = arch["massing"]["width"]
+    depth = arch["massing"]["depth"]
+
+    # Building outline
+    msp.add_lwpolyline(
+        [(0, 0), (width, 0), (width, depth), (0, depth), (0, 0)],
+        dxfattribs={'layer': 'WALLS', 'lineweight': 50}
+    )
+
+    # Core
+    core_side = arch["core"]["side"]
+    core_x = width/2 - core_side/2
+    core_y = depth/2 - core_side/2
+    msp.add_lwpolyline(
+        [(core_x, core_y), (core_x + core_side, core_y),
+         (core_x + core_side, core_y + core_side), (core_x, core_y + core_side), (core_x, core_y)],
+        dxfattribs={'layer': 'CORE'}
+    )
+    msp.add_text('CORE', dxfattribs={'layer': 'TEXT', 'height': 0.5}).set_placement(
+        (width/2, depth/2), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER
+    )
+
+    # Grid lines
+    grid = struct["grid"]
+    for i in range(grid["columns_x"]):
+        x = i * grid["bay_x"]
+        msp.add_line((x, -2), (x, depth + 2), dxfattribs={'layer': 'GRID'})
+        msp.add_text(chr(65 + i), dxfattribs={'layer': 'TEXT', 'height': 0.5}).set_placement(
+            (x, depth + 3), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER
+        )
+
+    for j in range(grid["columns_y"]):
+        y = j * grid["bay_y"]
+        msp.add_line((-2, y), (width + 2, y), dxfattribs={'layer': 'GRID'})
+        msp.add_text(str(j + 1), dxfattribs={'layer': 'TEXT', 'height': 0.5}).set_placement(
+            (-3, y), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER
+        )
+
+    # Columns
+    for col in struct["columns"]:
+        cx, cy = col["position"]
+        size = col["size"][0] / 1000  # Convert mm to m
+        half = size / 2
+        msp.add_lwpolyline(
+            [(cx - half, cy - half), (cx + half, cy - half),
+             (cx + half, cy + half), (cx - half, cy + half), (cx - half, cy - half)],
+            dxfattribs={'layer': 'COLUMNS'}
+        )
+        msp.add_text(col["id"], dxfattribs={'layer': 'TEXT', 'height': 0.2}).set_placement(
+            (cx, cy), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER
+        )
+
+    # Save to string buffer
+    import io
+    import base64
+    buffer = io.BytesIO()
+    doc.write(buffer)
+    buffer.seek(0)
+    dxf_content = base64.b64encode(buffer.read()).decode('utf-8')
+
+    project_name = storage["project"]["name"].replace(" ", "_")
+
+    return {
+        "filename": f"{project_name}_FloorPlan.dxf",
+        "content_base64": dxf_content,
+        "format": "DXF",
+        "version": "R2018",
+        "layers": ["WALLS", "COLUMNS", "GRID", "CORE", "DIMENSIONS", "TEXT"]
+    }
+
+
+@app.get("/api/schedules/rooms")
+async def get_room_schedule():
+    """Generate room schedule"""
+    if storage["design_data"] is None:
+        raise HTTPException(status_code=404, detail="No design data available")
+
+    arch = storage["design_data"]["architectural"]
+    spaces = arch["spaces"]
+
+    # Aggregate by type
+    type_summary = {}
+    for space in spaces:
+        stype = space["type"]
+        if stype not in type_summary:
+            type_summary[stype] = {"count": 0, "total_area": 0, "floors": set()}
+        type_summary[stype]["count"] += 1
+        type_summary[stype]["total_area"] += space["area"]
+        type_summary[stype]["floors"].add(space["floor"])
+
+    schedule = []
+    for stype, data in type_summary.items():
+        schedule.append({
+            "type": stype,
+            "count": data["count"],
+            "total_area_m2": round(data["total_area"], 1),
+            "avg_area_m2": round(data["total_area"] / data["count"], 1),
+            "floors": sorted(list(data["floors"]))
+        })
+
+    return {
+        "schedule": schedule,
+        "total_spaces": len(spaces),
+        "total_area_m2": round(sum(s["area"] for s in spaces), 1),
+        "efficiency": arch["efficiency"]
+    }
+
+
+@app.get("/api/schedules/columns")
+async def get_column_schedule():
+    """Generate column schedule"""
+    if storage["design_data"] is None:
+        raise HTTPException(status_code=404, detail="No design data available")
+
+    struct = storage["design_data"]["structural"]
+    columns = struct["columns"]
+
+    # Group by size
+    size_groups = {}
+    for col in columns:
+        size_key = f"{col['size'][0]}x{col['size'][1]}"
+        if size_key not in size_groups:
+            size_groups[size_key] = {
+                "size": size_key,
+                "width_mm": col["size"][0],
+                "depth_mm": col["size"][1],
+                "count": 0,
+                "columns": [],
+                "avg_load_kN": 0,
+                "avg_utilization": 0
+            }
+        size_groups[size_key]["count"] += 1
+        size_groups[size_key]["columns"].append(col["id"])
+        size_groups[size_key]["avg_load_kN"] += col["axial_load_kN"]
+        size_groups[size_key]["avg_utilization"] += col["utilization"]
+
+    schedule = []
+    for size_key, data in size_groups.items():
+        data["avg_load_kN"] = round(data["avg_load_kN"] / data["count"], 1)
+        data["avg_utilization"] = round(data["avg_utilization"] / data["count"], 2)
+        schedule.append(data)
+
+    return {
+        "schedule": schedule,
+        "total_columns": len(columns),
+        "material": struct["material"],
+        "system": struct["system"]
+    }
+
+
+@app.get("/api/cost/estimate")
+async def get_cost_estimate():
+    """Generate cost estimation"""
+    if storage["design_data"] is None:
+        raise HTTPException(status_code=404, detail="No design data available")
+
+    arch = storage["design_data"]["architectural"]
+    struct = storage["design_data"]["structural"]
+    mep = storage["design_data"]["mep"]
+
+    gfa = arch["massing"]["total_area"]
+    floors = arch["massing"]["floors"]
+
+    # Unit costs (SAR/m²) - typical Saudi Arabia rates
+    unit_costs = {
+        "substructure": 350,
+        "superstructure": 800,
+        "architectural": 650,
+        "mep_hvac": 400,
+        "mep_electrical": 250,
+        "mep_plumbing": 150,
+        "facade": 600,
+        "interior": 500,
+        "site_work": 100,
+        "preliminaries": 0.12,  # % of construction
+        "contingency": 0.10  # % of construction
+    }
+
+    # Calculate costs
+    costs = {
+        "substructure": gfa * unit_costs["substructure"] * 0.15,  # 15% of GFA for basement
+        "superstructure": gfa * unit_costs["superstructure"],
+        "architectural": gfa * unit_costs["architectural"],
+        "mep_hvac": gfa * unit_costs["mep_hvac"],
+        "mep_electrical": gfa * unit_costs["mep_electrical"],
+        "mep_plumbing": gfa * unit_costs["mep_plumbing"],
+        "facade": (arch["massing"]["width"] + arch["massing"]["depth"]) * 2 * arch["massing"]["height"] * 0.7 * unit_costs["facade"],
+        "interior": gfa * unit_costs["interior"],
+        "site_work": gfa * unit_costs["site_work"]
+    }
+
+    construction_total = sum(costs.values())
+    costs["preliminaries"] = construction_total * unit_costs["preliminaries"]
+    costs["contingency"] = construction_total * unit_costs["contingency"]
+
+    grand_total = construction_total + costs["preliminaries"] + costs["contingency"]
+    cost_per_m2 = grand_total / gfa
+
+    return {
+        "breakdown": {k: round(v, 0) for k, v in costs.items()},
+        "construction_total_SAR": round(construction_total, 0),
+        "grand_total_SAR": round(grand_total, 0),
+        "cost_per_m2_SAR": round(cost_per_m2, 0),
+        "gfa_m2": round(gfa, 0),
+        "currency": "SAR",
+        "note": "Preliminary estimate for budgeting purposes only"
+    }
+
+
+@app.get("/api/export/boq")
+async def get_boq():
+    """Generate Bill of Quantities"""
+    if storage["design_data"] is None:
+        raise HTTPException(status_code=404, detail="No design data available")
+
+    arch = storage["design_data"]["architectural"]
+    struct = storage["design_data"]["structural"]
+    mep = storage["design_data"]["mep"]
+
+    gfa = arch["massing"]["total_area"]
+    width = arch["massing"]["width"]
+    depth = arch["massing"]["depth"]
+    height = arch["massing"]["height"]
+    floors = arch["massing"]["floors"]
+    floor_height = arch["massing"]["floor_height"]
+
+    # Calculate quantities
+    boq = {
+        "excavation": {
+            "description": "Bulk excavation for foundations",
+            "quantity": round(width * depth * 3, 1),  # 3m deep
+            "unit": "m³",
+            "rate": 25,
+            "amount": round(width * depth * 3 * 25, 0)
+        },
+        "concrete_foundation": {
+            "description": "Reinforced concrete for raft foundation",
+            "quantity": round(width * depth * 0.6, 1),  # 600mm thick
+            "unit": "m³",
+            "rate": 1200,
+            "amount": round(width * depth * 0.6 * 1200, 0)
+        },
+        "concrete_columns": {
+            "description": "Reinforced concrete columns",
+            "quantity": round(len(struct["columns"]) * 0.16 * height, 1),  # 400x400 avg
+            "unit": "m³",
+            "rate": 1500,
+            "amount": round(len(struct["columns"]) * 0.16 * height * 1500, 0)
+        },
+        "concrete_slabs": {
+            "description": "Reinforced concrete floor slabs",
+            "quantity": round(gfa * struct["slab"]["thickness_mm"] / 1000, 1),
+            "unit": "m³",
+            "rate": 1100,
+            "amount": round(gfa * struct["slab"]["thickness_mm"] / 1000 * 1100, 0)
+        },
+        "blockwork": {
+            "description": "Hollow concrete blockwork walls",
+            "quantity": round((width + depth) * 2 * height * 0.3, 1),  # 30% of perimeter
+            "unit": "m²",
+            "rate": 180,
+            "amount": round((width + depth) * 2 * height * 0.3 * 180, 0)
+        },
+        "glazing": {
+            "description": "Double glazed curtain wall",
+            "quantity": round((width + depth) * 2 * height * 0.35, 1),  # 35% WWR
+            "unit": "m²",
+            "rate": 850,
+            "amount": round((width + depth) * 2 * height * 0.35 * 850, 0)
+        },
+        "hvac_system": {
+            "description": f"{mep['hvac']['system_type']} HVAC system",
+            "quantity": round(mep["hvac"]["total_cooling_ton"], 1),
+            "unit": "TR",
+            "rate": 15000,
+            "amount": round(mep["hvac"]["total_cooling_ton"] * 15000, 0)
+        },
+        "electrical_installation": {
+            "description": "Complete electrical installation",
+            "quantity": round(gfa, 0),
+            "unit": "m²",
+            "rate": 250,
+            "amount": round(gfa * 250, 0)
+        },
+        "plumbing": {
+            "description": "Plumbing and drainage installation",
+            "quantity": mep["plumbing"]["fixture_count"],
+            "unit": "fixtures",
+            "rate": 3500,
+            "amount": round(mep["plumbing"]["fixture_count"] * 3500, 0)
+        }
+    }
+
+    total = sum(item["amount"] for item in boq.values())
+
+    return {
+        "items": boq,
+        "subtotal_SAR": round(total, 0),
+        "contingency_10pct": round(total * 0.1, 0),
+        "total_SAR": round(total * 1.1, 0),
+        "gfa_m2": round(gfa, 0)
+    }
+
+
 # Export for Vercel
 handler = app

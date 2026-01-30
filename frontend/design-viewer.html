@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Architect Designer - Design Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-panel: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #475569;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .brand-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .header-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover { background: var(--bg-panel); color: var(--text); }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-ghost:hover { background: var(--bg-panel); }
+
+        /* Left Panel - Layers & Tools */
+        .left-panel {
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            margin-bottom: 24px;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Layer Controls */
+        .layer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--bg-panel);
+            border-radius: 6px;
+            margin-bottom: 6px;
+        }
+
+        .layer-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .layer-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .layer-name { font-size: 13px; }
+
+        .layer-toggle {
+            width: 40px;
+            height: 22px;
+            background: var(--border);
+            border-radius: 11px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .layer-toggle.active { background: var(--primary); }
+
+        .layer-toggle::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            right: 2px;
+            transition: right 0.2s;
+        }
+
+        .layer-toggle.active::after { right: 20px; }
+
+        /* Tools */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .tool-btn {
+            aspect-ratio: 1;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text);
+        }
+
+        .tool-btn:hover { border-color: var(--primary); }
+        .tool-btn.active { background: var(--primary); border-color: var(--primary); }
+
+        .tool-icon { font-size: 20px; }
+        .tool-label { font-size: 10px; color: var(--text-muted); }
+        .tool-btn.active .tool-label { color: white; }
+
+        /* Main Viewer */
+        .viewer-container {
+            background: #1a1a2e;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .viewer-2d, .viewer-3d, .viewer-section, .viewer-elevation {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .viewer-2d.active, .viewer-3d.active, .viewer-section.active, .viewer-elevation.active {
+            display: block;
+        }
+
+        #canvas-3d {
+            width: 100%;
+            height: 100%;
+        }
+
+        #svg-2d {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        #svg-2d:active { cursor: grabbing; }
+
+        /* Viewer Controls Overlay */
+        .viewer-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: var(--bg-card);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .view-control-btn {
+            width: 36px;
+            height: 36px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text);
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .view-control-btn:hover { background: var(--primary); border-color: var(--primary); }
+
+        .zoom-display {
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Right Panel - Properties */
+        .right-panel {
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .property-group {
+            background: var(--bg-panel);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .property-group-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .property-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .property-row:last-child { border-bottom: none; }
+
+        .property-label { color: var(--text-muted); }
+        .property-value { color: var(--text); font-weight: 500; }
+
+        /* Measurement Display */
+        .measurement-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .measurement-overlay.active { display: block; }
+
+        .measurement-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .measurement-unit {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Drawing View Tabs */
+        .drawing-tabs {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 4px;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .drawing-tab {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .drawing-tab:hover { background: var(--bg-panel); }
+        .drawing-tab.active { background: var(--primary); color: white; }
+
+        /* Scale Bar */
+        .scale-bar {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            background: var(--bg-card);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+
+        .scale-bar-line {
+            width: 100px;
+            height: 4px;
+            background: var(--text);
+            margin-top: 4px;
+            position: relative;
+        }
+
+        .scale-bar-line::before,
+        .scale-bar-line::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 8px;
+            background: var(--text);
+            top: -2px;
+        }
+
+        .scale-bar-line::before { left: 0; }
+        .scale-bar-line::after { right: 0; }
+
+        /* North Arrow */
+        .north-arrow {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background: var(--bg-card);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .north-arrow svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Download Panel */
+        .download-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: 8px;
+            min-width: 200px;
+        }
+
+        .download-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            background: var(--bg-panel);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .download-item:last-child { margin-bottom: 0; }
+
+        /* Info Badge */
+        .info-badge {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .info-badge strong { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-brand">
+                <div class="brand-mark">AI</div>
+                <span class="brand-title">Design Viewer</span>
+            </div>
+
+            <div class="header-tabs">
+                <button class="tab-btn active" data-view="2d">2D Plan</button>
+                <button class="tab-btn" data-view="3d">3D Model</button>
+                <button class="tab-btn" data-view="section">Sections</button>
+                <button class="tab-btn" data-view="elevation">Elevations</button>
+            </div>
+
+            <div class="header-actions">
+                <button class="btn btn-ghost" onclick="exportDWG()">Export DWG</button>
+                <button class="btn btn-ghost" onclick="exportPDF()">Export PDF</button>
+                <button class="btn btn-primary" onclick="window.location.href='evaluate.html'">Back to Design</button>
+            </div>
+        </header>
+
+        <!-- Left Panel - Layers & Tools -->
+        <aside class="left-panel">
+            <div class="panel-section">
+                <h3 class="panel-title">Layers</h3>
+                <div class="layer-item">
+                    <div class="layer-info">
+                        <div class="layer-color" style="background: #3b82f6"></div>
+                        <span class="layer-name">Architectural</span>
+                    </div>
+                    <div class="layer-toggle active" data-layer="architectural"></div>
+                </div>
+                <div class="layer-item">
+                    <div class="layer-info">
+                        <div class="layer-color" style="background: #ef4444"></div>
+                        <span class="layer-name">Structural</span>
+                    </div>
+                    <div class="layer-toggle active" data-layer="structural"></div>
+                </div>
+                <div class="layer-item">
+                    <div class="layer-info">
+                        <div class="layer-color" style="background: #10b981"></div>
+                        <span class="layer-name">MEP</span>
+                    </div>
+                    <div class="layer-toggle active" data-layer="mep"></div>
+                </div>
+                <div class="layer-item">
+                    <div class="layer-info">
+                        <div class="layer-color" style="background: #8b5cf6"></div>
+                        <span class="layer-name">Grid</span>
+                    </div>
+                    <div class="layer-toggle active" data-layer="grid"></div>
+                </div>
+                <div class="layer-item">
+                    <div class="layer-info">
+                        <div class="layer-color" style="background: #f59e0b"></div>
+                        <span class="layer-name">Dimensions</span>
+                    </div>
+                    <div class="layer-toggle active" data-layer="dimensions"></div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-title">Tools</h3>
+                <div class="tool-grid">
+                    <button class="tool-btn active" data-tool="select" title="Select">
+                        <span class="tool-icon">👆</span>
+                        <span class="tool-label">Select</span>
+                    </button>
+                    <button class="tool-btn" data-tool="pan" title="Pan">
+                        <span class="tool-icon">✋</span>
+                        <span class="tool-label">Pan</span>
+                    </button>
+                    <button class="tool-btn" data-tool="zoom" title="Zoom">
+                        <span class="tool-icon">🔍</span>
+                        <span class="tool-label">Zoom</span>
+                    </button>
+                    <button class="tool-btn" data-tool="measure" title="Measure">
+                        <span class="tool-icon">📏</span>
+                        <span class="tool-label">Measure</span>
+                    </button>
+                    <button class="tool-btn" data-tool="annotate" title="Annotate">
+                        <span class="tool-icon">📝</span>
+                        <span class="tool-label">Annotate</span>
+                    </button>
+                    <button class="tool-btn" data-tool="info" title="Info">
+                        <span class="tool-icon">ℹ️</span>
+                        <span class="tool-label">Info</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-title">3D Views</h3>
+                <div class="tool-grid">
+                    <button class="tool-btn" onclick="setView('front')">
+                        <span class="tool-icon">⬜</span>
+                        <span class="tool-label">Front</span>
+                    </button>
+                    <button class="tool-btn" onclick="setView('back')">
+                        <span class="tool-icon">⬜</span>
+                        <span class="tool-label">Back</span>
+                    </button>
+                    <button class="tool-btn" onclick="setView('left')">
+                        <span class="tool-icon">⬜</span>
+                        <span class="tool-label">Left</span>
+                    </button>
+                    <button class="tool-btn" onclick="setView('right')">
+                        <span class="tool-icon">⬜</span>
+                        <span class="tool-label">Right</span>
+                    </button>
+                    <button class="tool-btn" onclick="setView('top')">
+                        <span class="tool-icon">⬜</span>
+                        <span class="tool-label">Top</span>
+                    </button>
+                    <button class="tool-btn" onclick="setView('iso')">
+                        <span class="tool-icon">🔲</span>
+                        <span class="tool-label">Iso</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-title">Floor</h3>
+                <select id="floor-select" style="width: 100%; padding: 8px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; color: var(--text);">
+                    <option value="all">All Floors</option>
+                    <option value="0">Ground Floor</option>
+                    <option value="1">Floor 1</option>
+                    <option value="2">Floor 2</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- Main Viewer Area -->
+        <main class="viewer-container">
+            <!-- 2D Plan View -->
+            <div class="viewer-2d active" id="viewer-2d">
+                <svg id="svg-2d" viewBox="0 0 1000 800"></svg>
+            </div>
+
+            <!-- 3D Model View -->
+            <div class="viewer-3d" id="viewer-3d">
+                <canvas id="canvas-3d"></canvas>
+            </div>
+
+            <!-- Section View -->
+            <div class="viewer-section" id="viewer-section">
+                <svg id="svg-section" viewBox="0 0 1000 600"></svg>
+            </div>
+
+            <!-- Elevation View -->
+            <div class="viewer-elevation" id="viewer-elevation">
+                <svg id="svg-elevation" viewBox="0 0 1000 600"></svg>
+            </div>
+
+            <!-- Drawing Tabs (for sections/elevations) -->
+            <div class="drawing-tabs" id="section-tabs" style="display: none;">
+                <button class="drawing-tab active" data-section="longitudinal">Longitudinal</button>
+                <button class="drawing-tab" data-section="transverse">Transverse</button>
+            </div>
+
+            <div class="drawing-tabs" id="elevation-tabs" style="display: none;">
+                <button class="drawing-tab active" data-elevation="north">North</button>
+                <button class="drawing-tab" data-elevation="south">South</button>
+                <button class="drawing-tab" data-elevation="east">East</button>
+                <button class="drawing-tab" data-elevation="west">West</button>
+            </div>
+
+            <!-- North Arrow (2D) -->
+            <div class="north-arrow" id="north-arrow">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L8 12h3v10h2V12h3L12 2z"/>
+                </svg>
+            </div>
+
+            <!-- Scale Bar -->
+            <div class="scale-bar" id="scale-bar">
+                <span id="scale-value">10m</span>
+                <div class="scale-bar-line"></div>
+            </div>
+
+            <!-- Info Badge -->
+            <div class="info-badge" id="info-badge">
+                <strong>Floor Plan</strong> - Level 1 | Scale 1:100
+            </div>
+
+            <!-- Measurement Overlay -->
+            <div class="measurement-overlay" id="measurement-overlay">
+                <div class="measurement-value" id="measurement-value">0.00</div>
+                <div class="measurement-unit">meters</div>
+            </div>
+
+            <!-- View Controls -->
+            <div class="viewer-controls">
+                <button class="view-control-btn" onclick="zoomIn()" title="Zoom In">+</button>
+                <button class="view-control-btn" onclick="zoomOut()" title="Zoom Out">-</button>
+                <div class="zoom-display"><span id="zoom-level">100</span>%</div>
+                <button class="view-control-btn" onclick="fitView()" title="Fit">⊡</button>
+                <button class="view-control-btn" onclick="resetView()" title="Reset">↺</button>
+            </div>
+        </main>
+
+        <!-- Right Panel - Properties -->
+        <aside class="right-panel">
+            <div class="panel-section">
+                <h3 class="panel-title">Project Info</h3>
+                <div class="property-group">
+                    <div class="property-group-title">Building</div>
+                    <div class="property-row">
+                        <span class="property-label">Name</span>
+                        <span class="property-value" id="prop-name">Office Tower</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Type</span>
+                        <span class="property-value" id="prop-type">Office</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Floors</span>
+                        <span class="property-value" id="prop-floors">12</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">GFA</span>
+                        <span class="property-value" id="prop-gfa">15,000 m²</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Height</span>
+                        <span class="property-value" id="prop-height">43.2 m</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-title">Selected Element</h3>
+                <div class="property-group" id="selected-properties">
+                    <div class="property-group-title">No Selection</div>
+                    <div class="property-row">
+                        <span class="property-label">Click an element to view properties</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-title">Structural Summary</h3>
+                <div class="property-group">
+                    <div class="property-group-title">Columns</div>
+                    <div class="property-row">
+                        <span class="property-label">Count</span>
+                        <span class="property-value" id="prop-columns">30</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Grid</span>
+                        <span class="property-value" id="prop-grid">7.75m × 8.06m</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Size</span>
+                        <span class="property-value" id="prop-col-size">350×350 mm</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Utilization</span>
+                        <span class="property-value" id="prop-utilization">76%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-title">MEP Summary</h3>
+                <div class="property-group">
+                    <div class="property-group-title">HVAC</div>
+                    <div class="property-row">
+                        <span class="property-label">System</span>
+                        <span class="property-value" id="prop-hvac">Chiller AHU</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Cooling</span>
+                        <span class="property-value" id="prop-cooling">278 tons</span>
+                    </div>
+                    <div class="property-row">
+                        <span class="property-label">Electrical</span>
+                        <span class="property-value" id="prop-electrical">631 kW</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:8001'
+            : 'https://p0hlxndk8d.execute-api.us-east-1.amazonaws.com';
+
+        // State
+        let currentView = '2d';
+        let currentTool = 'select';
+        let zoomLevel = 100;
+        let panX = 0, panY = 0;
+        let designData = null;
+        let scene, camera, renderer, controls;
+        let layers = {
+            architectural: true,
+            structural: true,
+            mep: true,
+            grid: true,
+            dimensions: true
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadDesignData();
+            init3DViewer();
+            render2DPlan();
+            renderSection();
+            renderElevation();
+            setupEventListeners();
+        });
+
+        // Load design data from API
+        async function loadDesignData() {
+            try {
+                const response = await fetch(`${API_URL}/api/design/data`);
+                if (response.ok) {
+                    designData = await response.json();
+                    updateProperties();
+                    console.log('Design data loaded:', designData);
+                }
+            } catch (e) {
+                console.log('Using demo data');
+                designData = getDemoData();
+                updateProperties();
+            }
+        }
+
+        // Demo data fallback
+        function getDemoData() {
+            return {
+                architectural: {
+                    massing: { width: 31, depth: 40.3, height: 43.2, floors: 12, total_area: 15000 },
+                    core: { area: 225, ratio: 18, side: 15 },
+                    spaces: [],
+                    efficiency: 72
+                },
+                structural: {
+                    system: 'braced_frame',
+                    grid: { bay_x: 7.75, bay_y: 8.06, columns_x: 5, columns_y: 6 },
+                    columns: Array.from({length: 30}, (_, i) => ({
+                        id: `C${i+1}`,
+                        position: [(i % 5) * 7.75, Math.floor(i / 5) * 8.06],
+                        size: [350, 350],
+                        utilization: 0.76
+                    })),
+                    slab: { thickness_mm: 250 }
+                },
+                mep: {
+                    hvac: { system_type: 'Chiller_AHU', total_cooling_ton: 278 },
+                    electrical: { total_connected_kW: 631 }
+                }
+            };
+        }
+
+        // Update property panel
+        function updateProperties() {
+            if (!designData) return;
+            const arch = designData.architectural;
+            const struct = designData.structural;
+            const mep = designData.mep;
+
+            document.getElementById('prop-floors').textContent = arch.massing.floors;
+            document.getElementById('prop-gfa').textContent = `${arch.massing.total_area.toLocaleString()} m²`;
+            document.getElementById('prop-height').textContent = `${arch.massing.height} m`;
+            document.getElementById('prop-columns').textContent = struct.columns.length;
+            document.getElementById('prop-grid').textContent = `${struct.grid.bay_x}m × ${struct.grid.bay_y}m`;
+            document.getElementById('prop-col-size').textContent = `${struct.columns[0]?.size[0]}×${struct.columns[0]?.size[1]} mm`;
+            document.getElementById('prop-hvac').textContent = mep.hvac.system_type.replace('_', ' ');
+            document.getElementById('prop-cooling').textContent = `${Math.round(mep.hvac.total_cooling_ton)} tons`;
+            document.getElementById('prop-electrical').textContent = `${Math.round(mep.electrical.total_connected_kW)} kW`;
+
+            // Update floor selector
+            const floorSelect = document.getElementById('floor-select');
+            floorSelect.innerHTML = '<option value="all">All Floors</option>';
+            for (let i = 0; i < arch.massing.floors; i++) {
+                floorSelect.innerHTML += `<option value="${i}">${i === 0 ? 'Ground Floor' : `Floor ${i}`}</option>`;
+            }
+        }
+
+        // Initialize 3D viewer with Three.js
+        function init3DViewer() {
+            const canvas = document.getElementById('canvas-3d');
+            const container = document.getElementById('viewer-3d');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(80, 60, 80);
+
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+
+            // OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.target.set(0, 20, 0);
+
+            // Lighting
+            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambient);
+            const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+            directional.position.set(50, 100, 50);
+            scene.add(directional);
+
+            // Grid helper
+            const gridHelper = new THREE.GridHelper(100, 20, 0x8b5cf6, 0x334155);
+            scene.add(gridHelper);
+
+            // Build 3D model
+            build3DModel();
+
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        // Build 3D model from design data
+        function build3DModel() {
+            if (!designData) return;
+
+            const arch = designData.architectural;
+            const struct = designData.structural;
+
+            // Building massing
+            const buildingGeom = new THREE.BoxGeometry(
+                arch.massing.width,
+                arch.massing.height,
+                arch.massing.depth
+            );
+            const buildingMat = new THREE.MeshPhongMaterial({
+                color: 0x3b82f6,
+                transparent: true,
+                opacity: 0.3
+            });
+            const building = new THREE.Mesh(buildingGeom, buildingMat);
+            building.position.y = arch.massing.height / 2;
+            building.userData = { type: 'building', layer: 'architectural' };
+            scene.add(building);
+
+            // Core
+            const coreGeom = new THREE.BoxGeometry(
+                arch.core.side,
+                arch.massing.height,
+                arch.core.side
+            );
+            const coreMat = new THREE.MeshPhongMaterial({ color: 0x64748b });
+            const core = new THREE.Mesh(coreGeom, coreMat);
+            core.position.y = arch.massing.height / 2;
+            core.userData = { type: 'core', layer: 'architectural' };
+            scene.add(core);
+
+            // Columns
+            const colGeom = new THREE.BoxGeometry(0.35, arch.massing.height, 0.35);
+            const colMat = new THREE.MeshPhongMaterial({ color: 0xef4444 });
+
+            struct.columns.forEach(col => {
+                const column = new THREE.Mesh(colGeom, colMat);
+                column.position.set(
+                    col.position[0] - arch.massing.width / 2,
+                    arch.massing.height / 2,
+                    col.position[1] - arch.massing.depth / 2
+                );
+                column.userData = { type: 'column', id: col.id, layer: 'structural', ...col };
+                scene.add(column);
+            });
+
+            // Floor slabs
+            for (let i = 0; i <= arch.massing.floors; i++) {
+                const slabGeom = new THREE.BoxGeometry(arch.massing.width, 0.25, arch.massing.depth);
+                const slabMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8 });
+                const slab = new THREE.Mesh(slabGeom, slabMat);
+                slab.position.y = i * (arch.massing.height / arch.massing.floors);
+                slab.userData = { type: 'slab', floor: i, layer: 'structural' };
+                scene.add(slab);
+            }
+        }
+
+        // Render 2D floor plan with SVG
+        function render2DPlan() {
+            if (!designData) return;
+
+            const svg = document.getElementById('svg-2d');
+            const arch = designData.architectural;
+            const struct = designData.structural;
+
+            const scale = 10; // 1m = 10px
+            const offsetX = 100;
+            const offsetY = 100;
+            const width = arch.massing.width * scale;
+            const depth = arch.massing.depth * scale;
+
+            let svgContent = '';
+
+            // Grid layer
+            if (layers.grid) {
+                svgContent += `<g class="layer-grid" stroke="#8b5cf6" stroke-width="0.5" stroke-dasharray="5,5">`;
+                for (let i = 0; i <= struct.grid.columns_x; i++) {
+                    const x = offsetX + i * struct.grid.bay_x * scale;
+                    svgContent += `<line x1="${x}" y1="${offsetY - 20}" x2="${x}" y2="${offsetY + depth + 20}"/>`;
+                    svgContent += `<text x="${x}" y="${offsetY - 30}" fill="#8b5cf6" font-size="12" text-anchor="middle">${String.fromCharCode(65 + i)}</text>`;
+                }
+                for (let j = 0; j <= struct.grid.columns_y; j++) {
+                    const y = offsetY + j * struct.grid.bay_y * scale;
+                    svgContent += `<line x1="${offsetX - 20}" y1="${y}" x2="${offsetX + width + 20}" y2="${y}"/>`;
+                    svgContent += `<text x="${offsetX - 35}" y="${y + 4}" fill="#8b5cf6" font-size="12" text-anchor="middle">${j + 1}</text>`;
+                }
+                svgContent += '</g>';
+            }
+
+            // Building outline (architectural)
+            if (layers.architectural) {
+                svgContent += `<g class="layer-architectural">`;
+                svgContent += `<rect x="${offsetX}" y="${offsetY}" width="${width}" height="${depth}" fill="none" stroke="#3b82f6" stroke-width="2"/>`;
+
+                // Core
+                const coreSize = arch.core.side * scale;
+                const coreX = offsetX + (width - coreSize) / 2;
+                const coreY = offsetY + (depth - coreSize) / 2;
+                svgContent += `<rect x="${coreX}" y="${coreY}" width="${coreSize}" height="${coreSize}" fill="#64748b" stroke="#475569" stroke-width="1"/>`;
+                svgContent += `<text x="${coreX + coreSize/2}" y="${coreY + coreSize/2 + 4}" fill="white" font-size="10" text-anchor="middle">CORE</text>`;
+                svgContent += '</g>';
+            }
+
+            // Columns (structural)
+            if (layers.structural) {
+                svgContent += `<g class="layer-structural">`;
+                struct.columns.forEach(col => {
+                    const colSize = col.size[0] / 1000 * scale;
+                    const x = offsetX + col.position[0] * scale - colSize / 2;
+                    const y = offsetY + col.position[1] * scale - colSize / 2;
+                    svgContent += `<rect x="${x}" y="${y}" width="${colSize}" height="${colSize}" fill="#ef4444" stroke="#b91c1c" stroke-width="1" class="column" data-id="${col.id}"/>`;
+                });
+                svgContent += '</g>';
+            }
+
+            // Dimensions
+            if (layers.dimensions) {
+                svgContent += `<g class="layer-dimensions" fill="#f97316" font-size="11">`;
+                // Width dimension
+                svgContent += `<line x1="${offsetX}" y1="${offsetY + depth + 40}" x2="${offsetX + width}" y2="${offsetY + depth + 40}" stroke="#f97316" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"/>`;
+                svgContent += `<text x="${offsetX + width/2}" y="${offsetY + depth + 55}" text-anchor="middle">${arch.massing.width.toFixed(1)}m</text>`;
+                // Depth dimension
+                svgContent += `<line x1="${offsetX + width + 40}" y1="${offsetY}" x2="${offsetX + width + 40}" y2="${offsetY + depth}" stroke="#f97316" stroke-width="1"/>`;
+                svgContent += `<text x="${offsetX + width + 55}" y="${offsetY + depth/2}" text-anchor="middle" transform="rotate(90 ${offsetX + width + 55} ${offsetY + depth/2})">${arch.massing.depth.toFixed(1)}m</text>`;
+                svgContent += '</g>';
+            }
+
+            // Arrow marker definition
+            svgContent = `<defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto-start-reverse">
+                    <path d="M0,0 L10,5 L0,10 z" fill="#f97316"/>
+                </marker>
+            </defs>` + svgContent;
+
+            svg.innerHTML = svgContent;
+            svg.setAttribute('viewBox', `0 0 ${width + 200} ${depth + 200}`);
+        }
+
+        // Render building section
+        function renderSection() {
+            if (!designData) return;
+
+            const svg = document.getElementById('svg-section');
+            const arch = designData.architectural;
+            const struct = designData.structural;
+
+            const scale = 8;
+            const offsetX = 100;
+            const offsetY = 50;
+            const width = arch.massing.width * scale;
+            const height = arch.massing.height * scale;
+            const floorHeight = height / arch.massing.floors;
+
+            let svgContent = '';
+
+            // Ground line
+            svgContent += `<line x1="50" y1="${offsetY + height}" x2="${offsetX + width + 50}" y2="${offsetY + height}" stroke="#475569" stroke-width="2"/>`;
+            svgContent += `<pattern id="ground" patternUnits="userSpaceOnUse" width="20" height="10">
+                <line x1="0" y1="10" x2="10" y2="0" stroke="#475569" stroke-width="1"/>
+            </pattern>`;
+            svgContent += `<rect x="50" y="${offsetY + height}" width="${width + 100}" height="20" fill="url(#ground)"/>`;
+
+            // Building outline
+            svgContent += `<rect x="${offsetX}" y="${offsetY}" width="${width}" height="${height}" fill="none" stroke="#3b82f6" stroke-width="2"/>`;
+
+            // Floor lines
+            for (let i = 0; i <= arch.massing.floors; i++) {
+                const y = offsetY + height - i * floorHeight;
+                svgContent += `<line x1="${offsetX}" y1="${y}" x2="${offsetX + width}" y2="${y}" stroke="#64748b" stroke-width="1"/>`;
+                // Floor label
+                svgContent += `<text x="${offsetX - 10}" y="${y + 4}" fill="#94a3b8" font-size="10" text-anchor="end">${i === 0 ? 'GF' : `L${i}`}</text>`;
+                // Level dimension
+                svgContent += `<text x="${offsetX + width + 10}" y="${y + 4}" fill="#f97316" font-size="10">+${(i * 3.6).toFixed(1)}m</text>`;
+            }
+
+            // Core in section
+            const coreWidth = arch.core.side * scale;
+            const coreX = offsetX + (width - coreWidth) / 2;
+            svgContent += `<rect x="${coreX}" y="${offsetY}" width="${coreWidth}" height="${height}" fill="#334155" stroke="#475569" stroke-width="1"/>`;
+
+            // Columns in section
+            struct.columns.slice(0, struct.grid.columns_x).forEach((col, i) => {
+                const colWidth = col.size[0] / 1000 * scale;
+                const x = offsetX + col.position[0] * scale - colWidth / 2;
+                svgContent += `<rect x="${x}" y="${offsetY}" width="${colWidth}" height="${height}" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>`;
+            });
+
+            // Height dimension
+            svgContent += `<line x1="${offsetX - 30}" y1="${offsetY}" x2="${offsetX - 30}" y2="${offsetY + height}" stroke="#f97316" stroke-width="1"/>`;
+            svgContent += `<text x="${offsetX - 40}" y="${offsetY + height/2}" fill="#f97316" font-size="11" text-anchor="middle" transform="rotate(-90 ${offsetX - 40} ${offsetY + height/2})">${arch.massing.height.toFixed(1)}m</text>`;
+
+            // Title
+            svgContent += `<text x="${offsetX + width/2}" y="30" fill="#f1f5f9" font-size="14" text-anchor="middle" font-weight="600">LONGITUDINAL SECTION A-A</text>`;
+
+            svg.innerHTML = svgContent;
+        }
+
+        // Render building elevation
+        function renderElevation() {
+            if (!designData) return;
+
+            const svg = document.getElementById('svg-elevation');
+            const arch = designData.architectural;
+
+            const scale = 8;
+            const offsetX = 150;
+            const offsetY = 50;
+            const width = arch.massing.width * scale;
+            const height = arch.massing.height * scale;
+            const floorHeight = height / arch.massing.floors;
+
+            let svgContent = '';
+
+            // Ground line
+            svgContent += `<line x1="50" y1="${offsetY + height}" x2="${offsetX + width + 50}" y2="${offsetY + height}" stroke="#475569" stroke-width="2"/>`;
+
+            // Building outline
+            svgContent += `<rect x="${offsetX}" y="${offsetY}" width="${width}" height="${height}" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>`;
+
+            // Windows (based on WWR)
+            const wwr = 0.4; // 40% window-to-wall ratio
+            const windowWidth = (width * 0.8) / 6; // 6 window bays
+            const windowHeight = floorHeight * 0.6;
+
+            for (let floor = 1; floor <= arch.massing.floors; floor++) {
+                const floorY = offsetY + height - floor * floorHeight;
+                for (let w = 0; w < 6; w++) {
+                    const windowX = offsetX + width * 0.1 + w * (windowWidth + 10);
+                    svgContent += `<rect x="${windowX}" y="${floorY + floorHeight * 0.2}" width="${windowWidth}" height="${windowHeight}" fill="#0ea5e9" stroke="#0284c7" stroke-width="1" rx="2"/>`;
+                }
+            }
+
+            // Floor lines (subtle)
+            for (let i = 0; i <= arch.massing.floors; i++) {
+                const y = offsetY + height - i * floorHeight;
+                svgContent += `<line x1="${offsetX}" y1="${y}" x2="${offsetX + width}" y2="${y}" stroke="#475569" stroke-width="0.5" stroke-dasharray="5,5"/>`;
+            }
+
+            // Dimensions
+            svgContent += `<line x1="${offsetX - 30}" y1="${offsetY}" x2="${offsetX - 30}" y2="${offsetY + height}" stroke="#f97316" stroke-width="1"/>`;
+            svgContent += `<text x="${offsetX - 40}" y="${offsetY + height/2}" fill="#f97316" font-size="11" text-anchor="middle" transform="rotate(-90 ${offsetX - 40} ${offsetY + height/2})">${arch.massing.height.toFixed(1)}m</text>`;
+
+            svgContent += `<line x1="${offsetX}" y1="${offsetY + height + 30}" x2="${offsetX + width}" y2="${offsetY + height + 30}" stroke="#f97316" stroke-width="1"/>`;
+            svgContent += `<text x="${offsetX + width/2}" y="${offsetY + height + 45}" fill="#f97316" font-size="11" text-anchor="middle">${arch.massing.width.toFixed(1)}m</text>`;
+
+            // Title
+            svgContent += `<text x="${offsetX + width/2}" y="30" fill="#f1f5f9" font-size="14" text-anchor="middle" font-weight="600">NORTH ELEVATION</text>`;
+
+            svg.innerHTML = svgContent;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // View tabs
+            document.querySelectorAll('.tab-btn[data-view]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn[data-view]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    switchView(btn.dataset.view);
+                });
+            });
+
+            // Layer toggles
+            document.querySelectorAll('.layer-toggle').forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    toggle.classList.toggle('active');
+                    layers[toggle.dataset.layer] = toggle.classList.contains('active');
+                    render2DPlan();
+                    updateLayerVisibility();
+                });
+            });
+
+            // Tool buttons
+            document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentTool = btn.dataset.tool;
+                    updateCursor();
+                });
+            });
+
+            // SVG pan/zoom
+            const svg2d = document.getElementById('svg-2d');
+            let isPanning = false;
+            let startX, startY;
+
+            svg2d.addEventListener('mousedown', (e) => {
+                if (currentTool === 'pan' || e.button === 1) {
+                    isPanning = true;
+                    startX = e.clientX - panX;
+                    startY = e.clientY - panY;
+                    svg2d.style.cursor = 'grabbing';
+                }
+            });
+
+            svg2d.addEventListener('mousemove', (e) => {
+                if (isPanning) {
+                    panX = e.clientX - startX;
+                    panY = e.clientY - startY;
+                    updateSVGTransform();
+                }
+            });
+
+            svg2d.addEventListener('mouseup', () => {
+                isPanning = false;
+                updateCursor();
+            });
+
+            svg2d.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -10 : 10;
+                zoomLevel = Math.max(25, Math.min(400, zoomLevel + delta));
+                document.getElementById('zoom-level').textContent = zoomLevel;
+                updateSVGTransform();
+            });
+
+            // Element selection
+            svg2d.addEventListener('click', (e) => {
+                if (currentTool === 'select' && e.target.classList.contains('column')) {
+                    selectElement(e.target);
+                }
+            });
+        }
+
+        // Switch view
+        function switchView(view) {
+            currentView = view;
+            document.querySelectorAll('.viewer-2d, .viewer-3d, .viewer-section, .viewer-elevation').forEach(v => v.classList.remove('active'));
+            document.getElementById(`viewer-${view}`).classList.add('active');
+
+            // Show/hide relevant UI
+            document.getElementById('section-tabs').style.display = view === 'section' ? 'flex' : 'none';
+            document.getElementById('elevation-tabs').style.display = view === 'elevation' ? 'flex' : 'none';
+            document.getElementById('north-arrow').style.display = view === '2d' ? 'flex' : 'none';
+            document.getElementById('scale-bar').style.display = (view === '2d' || view === 'section' || view === 'elevation') ? 'block' : 'none';
+
+            // Update info badge
+            const badges = {
+                '2d': '<strong>Floor Plan</strong> - Level 1 | Scale 1:100',
+                '3d': '<strong>3D Model</strong> - Orbit to rotate | Scroll to zoom',
+                'section': '<strong>Section</strong> - Longitudinal A-A | Scale 1:100',
+                'elevation': '<strong>Elevation</strong> - North | Scale 1:100'
+            };
+            document.getElementById('info-badge').innerHTML = badges[view];
+        }
+
+        // Update layer visibility in 3D
+        function updateLayerVisibility() {
+            scene.traverse(obj => {
+                if (obj.userData && obj.userData.layer) {
+                    obj.visible = layers[obj.userData.layer];
+                }
+            });
+        }
+
+        // Select element and show properties
+        function selectElement(el) {
+            document.querySelectorAll('.column').forEach(c => c.style.stroke = '#b91c1c');
+            el.style.stroke = '#f97316';
+            el.style.strokeWidth = '3';
+
+            const id = el.dataset.id;
+            const col = designData.structural.columns.find(c => c.id === id);
+            if (col) {
+                document.getElementById('selected-properties').innerHTML = `
+                    <div class="property-group-title">Column ${col.id}</div>
+                    <div class="property-row"><span class="property-label">Position</span><span class="property-value">(${col.position[0].toFixed(1)}, ${col.position[1].toFixed(1)})</span></div>
+                    <div class="property-row"><span class="property-label">Size</span><span class="property-value">${col.size[0]}×${col.size[1]} mm</span></div>
+                    <div class="property-row"><span class="property-label">Utilization</span><span class="property-value">${(col.utilization * 100).toFixed(0)}%</span></div>
+                    <div class="property-row"><span class="property-label">Material</span><span class="property-value">Concrete C40</span></div>
+                `;
+            }
+        }
+
+        // Zoom functions
+        function zoomIn() {
+            zoomLevel = Math.min(400, zoomLevel + 25);
+            document.getElementById('zoom-level').textContent = zoomLevel;
+            updateSVGTransform();
+        }
+
+        function zoomOut() {
+            zoomLevel = Math.max(25, zoomLevel - 25);
+            document.getElementById('zoom-level').textContent = zoomLevel;
+            updateSVGTransform();
+        }
+
+        function fitView() {
+            zoomLevel = 100;
+            panX = 0;
+            panY = 0;
+            document.getElementById('zoom-level').textContent = zoomLevel;
+            updateSVGTransform();
+        }
+
+        function resetView() {
+            fitView();
+            if (controls) {
+                controls.reset();
+            }
+        }
+
+        function updateSVGTransform() {
+            const svg = document.getElementById('svg-2d');
+            const scale = zoomLevel / 100;
+            svg.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        }
+
+        function updateCursor() {
+            const svg = document.getElementById('svg-2d');
+            const cursors = {
+                select: 'default',
+                pan: 'grab',
+                zoom: 'zoom-in',
+                measure: 'crosshair',
+                annotate: 'text',
+                info: 'help'
+            };
+            svg.style.cursor = cursors[currentTool] || 'default';
+        }
+
+        // Set 3D camera view
+        function setView(view) {
+            if (!camera || !controls) return;
+            const dist = 100;
+            const views = {
+                front: { pos: [0, 30, dist], target: [0, 20, 0] },
+                back: { pos: [0, 30, -dist], target: [0, 20, 0] },
+                left: { pos: [-dist, 30, 0], target: [0, 20, 0] },
+                right: { pos: [dist, 30, 0], target: [0, 20, 0] },
+                top: { pos: [0, dist, 0], target: [0, 0, 0] },
+                iso: { pos: [80, 60, 80], target: [0, 20, 0] }
+            };
+            const v = views[view];
+            camera.position.set(...v.pos);
+            controls.target.set(...v.target);
+            controls.update();
+        }
+
+        // Export functions
+        async function exportDWG() {
+            try {
+                const response = await fetch(`${API_URL}/api/export/dwg`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.content_base64) {
+                        // Decode base64 and download
+                        const binaryString = atob(data.content_base64);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        const blob = new Blob([bytes], { type: 'application/dxf' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = data.filename || 'FloorPlan.dxf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        alert(`✅ DXF file downloaded: ${data.filename}\n\nLayers: ${data.layers.join(', ')}`);
+                    } else if (data.error) {
+                        alert(`❌ ${data.error}\n${data.message}`);
+                    }
+                } else {
+                    throw new Error('Server error');
+                }
+            } catch (e) {
+                alert('❌ DWG Export requires server connection.\n\nPlease ensure the API is running.');
+            }
+        }
+
+        async function exportPDF() {
+            // Generate PDF from current SVG views
+            try {
+                const svg = document.getElementById('svg-2d').outerHTML;
+                const blob = new Blob([`<html><body>${svg}</body></html>`], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                alert('📄 PDF Export: Print the opened page to PDF.\n\nUse Ctrl+P or Cmd+P to print.');
+            } catch (e) {
+                alert('PDF Export: Use browser print (Ctrl+P) to save as PDF.');
+            }
+        }
+
+        // Export schedule as XLSX
+        async function exportSchedule(type) {
+            try {
+                const response = await fetch(`${API_URL}/api/schedules/${type}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`${type} Schedule:`, data);
+                    alert(`📋 ${type.charAt(0).toUpperCase() + type.slice(1)} Schedule:\n\n${JSON.stringify(data.schedule, null, 2)}`);
+                }
+            } catch (e) {
+                console.error('Schedule export error:', e);
+            }
+        }
+
+        // Export cost estimate
+        async function exportCost() {
+            try {
+                const response = await fetch(`${API_URL}/api/cost/estimate`);
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`💰 Cost Estimate:\n\nTotal: ${data.grand_total_SAR.toLocaleString()} SAR\nPer m²: ${data.cost_per_m2_SAR.toLocaleString()} SAR/m²\n\nBreakdown:\n${Object.entries(data.breakdown).map(([k, v]) => `  ${k}: ${v.toLocaleString()} SAR`).join('\n')}`);
+                }
+            } catch (e) {
+                console.error('Cost export error:', e);
+            }
+        }
+    </script>
+</body>
+</html>
