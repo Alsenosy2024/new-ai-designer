@@ -16,3 +16,7 @@ backend/.venv/
 backend/app.db
 backend/storage/
 backend/.pytest_cache/
+
+# Lambda build artifacts
+lambda_build/
+lambda_package.zip
