@@ -1104,8 +1104,8 @@
             projectData = {
                 name: document.getElementById('projectName').value,
                 type: document.getElementById('buildingType').value,
-                floors: document.getElementById('floors').value,
-                gfa: document.getElementById('totalArea').value,
+                floors: parseInt(document.getElementById('floors').value) || 1,
+                gfa: parseFloat(document.getElementById('totalArea').value) || 1000,
                 region: document.getElementById('location').value
             };
 
@@ -1121,30 +1121,46 @@
             updateProgress(5, 'إنشاء المشروع...');
 
             try {
+                // 1. Save project state
                 updateAgent('arch', 'running', 'يعمل...');
-                await fetch(`${API_URL}/api/state`, {
+                const stateResponse = await fetch(`${API_URL}/api/state`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ project: projectData })
                 });
+
+                if (!stateResponse.ok) {
+                    throw new Error('فشل في حفظ بيانات المشروع');
+                }
+
                 updateProgress(15, 'تم إنشاء المشروع');
                 addLog('تم إنشاء المشروع بنجاح', 'success');
 
+                // 2. Start the run
                 updateProgress(20, 'بدء التصميم...');
-                await fetch(`${API_URL}/api/runs/start`, { method: 'POST' });
+                const startResponse = await fetch(`${API_URL}/api/runs/start`, { method: 'POST' });
+
+                if (!startResponse.ok) {
+                    throw new Error('فشل في بدء التصميم');
+                }
+
+                const runData = await startResponse.json();
+                const runId = runData.run?.id;
                 addLog('بدء تشغيل الوكلاء', 'info');
 
-                await simulateProgress();
+                // 3. Track REAL progress from backend events
+                await trackRealProgress(runId);
 
+                // 4. Get design data AFTER pipeline completes
                 updateProgress(90, 'جاري تحميل النتائج...');
                 const dataResponse = await fetch(`${API_URL}/api/design/data`);
-                if (dataResponse.ok) {
-                    designData = await dataResponse.json();
-                    addLog('تم استلام بيانات التصميم', 'success');
-                } else {
-                    designData = getDemoData();
-                    addLog('استخدام البيانات التجريبية', 'info');
+
+                if (!dataResponse.ok) {
+                    throw new Error('فشل في تحميل بيانات التصميم - الـ API لم يرجع بيانات');
                 }
+
+                designData = await dataResponse.json();
+                addLog('تم استلام بيانات التصميم الحقيقية', 'success');
 
                 updateProgress(100, 'اكتمل التصميم!');
                 updateAgent('coord', 'completed', 'مكتمل');
@@ -1161,33 +1177,90 @@
 
             } catch (error) {
                 addLog(`خطأ: ${error.message}`, 'error');
-                designData = getDemoData();
+                // Show error to user - NO SILENT DEMO FALLBACK
+                alert('حدث خطأ: ' + error.message + '\n\nتأكد من أن الـ Backend شغال.');
+
+                // Still allow navigation but show warning
                 completeStep('design');
                 enableStep('results');
                 enableStep('export');
+
+                // Use demo data but warn user
+                designData = getDemoData();
+                addLog('⚠️ تحذير: استخدام بيانات تجريبية بسبب خطأ في الاتصال', 'warning');
+
                 updatePropertiesPanel();
                 updateSummary();
                 setTimeout(() => goToStep('results'), 1500);
             }
         }
 
-        async function simulateProgress() {
-            const steps = [
-                { progress: 30, agent: 'arch', status: 'completed', msg: 'اكتمل التصميم المعماري' },
-                { progress: 40, agent: 'struct', status: 'running', msg: 'بدء التصميم الإنشائي...' },
-                { progress: 55, agent: 'struct', status: 'completed', msg: 'اكتمل تصميم الأعمدة' },
-                { progress: 65, agent: 'mep', status: 'running', msg: 'بدء تصميم MEP...' },
-                { progress: 75, agent: 'mep', status: 'completed', msg: 'اكتمل تصميم التكييف' },
-                { progress: 85, agent: 'coord', status: 'running', msg: 'التنسيق بين الأنظمة...' }
-            ];
+        async function trackRealProgress(runId) {
+            const stepProgress = {
+                'architecture': 30,
+                'structural': 55,
+                'mep': 75,
+                'finalization': 100
+            };
 
-            for (const step of steps) {
-                await sleep(800);
-                updateProgress(step.progress, step.msg);
-                updateAgent(step.agent, step.status, step.status === 'running' ? 'يعمل...' : 'مكتمل');
-                addLog(step.msg, step.status === 'completed' ? 'success' : 'info');
+            const stepAgents = {
+                'architecture': 'arch',
+                'structural': 'struct',
+                'mep': 'mep',
+                'finalization': 'coord'
+            };
+
+            let lastStep = '';
+            let attempts = 0;
+            const maxAttempts = 30; // 30 seconds timeout
+
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`${API_URL}/api/runs/${runId}/events`);
+
+                    if (response.ok) {
+                        const events = await response.json();
+
+                        if (events && events.length > 0) {
+                            const lastEvent = events[events.length - 1];
+                            const step = lastEvent.step || '';
+                            const message = lastEvent.message || '';
+
+                            // Update progress
+                            const progress = stepProgress[step] || 50;
+                            updateProgress(progress, message);
+
+                            // Update agent status
+                            if (step !== lastStep && stepAgents[step]) {
+                                if (lastStep && stepAgents[lastStep]) {
+                                    updateAgent(stepAgents[lastStep], 'completed', 'مكتمل');
+                                }
+                                updateAgent(stepAgents[step], 'running', 'يعمل...');
+                                lastStep = step;
+                            }
+
+                            addLog(message, lastEvent.level === 'success' ? 'success' : 'info');
+
+                            // Check if complete
+                            if (step === 'finalization') {
+                                updateAgent('coord', 'completed', 'مكتمل');
+                                return;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Ignore polling errors
+                }
+
+                await sleep(1000);
+                attempts++;
             }
+
+            // Timeout - assume complete
+            addLog('انتهت مهلة الانتظار - جاري المتابعة...', 'info');
         }
+
+        // simulateProgress removed - now using trackRealProgress with backend events
 
         function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -1437,16 +1510,21 @@
             core.userData = { layer: 'architectural' };
             scene.add(core);
 
-            const colGeom = new THREE.BoxGeometry(0.4, arch.massing.height, 0.4);
+            // Create columns with REAL sizes from structural data
             const colMat = new THREE.MeshPhongMaterial({ color: 0xef4444 });
             struct.columns.forEach(col => {
+                // Get actual column size (in mm, convert to m)
+                const colWidth = (col.size && col.size[0]) ? col.size[0] / 1000 : 0.4;
+                const colDepth = (col.size && col.size[1]) ? col.size[1] / 1000 : 0.4;
+
+                const colGeom = new THREE.BoxGeometry(colWidth, arch.massing.height, colDepth);
                 const column = new THREE.Mesh(colGeom, colMat);
                 column.position.set(
                     col.position[0] - arch.massing.width/2,
                     arch.massing.height / 2,
                     col.position[1] - arch.massing.depth/2
                 );
-                column.userData = { layer: 'structural' };
+                column.userData = { layer: 'structural', id: col.id, size: `${col.size[0]}x${col.size[1]}mm` };
                 scene.add(column);
             });
 
