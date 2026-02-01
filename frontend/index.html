@@ -1052,6 +1052,11 @@
             'svg-section': { x: 0, y: 0, width: 800, height: 500 },
             'svg-elevation': { x: 0, y: 0, width: 800, height: 500 }
         };
+        let svgOriginalSizes = {
+            'svg-2d': { width: 800, height: 600 },
+            'svg-section': { width: 800, height: 500 },
+            'svg-elevation': { width: 800, height: 500 }
+        };
         let isPanning = false;
         let panStart = { x: 0, y: 0 };
         let currentTool = 'select';
@@ -1396,6 +1401,7 @@
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+180} ${d+180}`);
             svgViewBoxes['svg-2d'] = { x: 0, y: 0, width: w+180, height: d+180 };
+            svgOriginalSizes['svg-2d'] = { width: w+180, height: d+180 };
             initSVGPan(svg);
         }
 
@@ -1431,6 +1437,7 @@
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+160} ${h+80}`);
             svgViewBoxes['svg-section'] = { x: 0, y: 0, width: w+160, height: h+80 };
+            svgOriginalSizes['svg-section'] = { width: w+160, height: h+80 };
             initSVGPan(svg);
         }
 
@@ -1463,6 +1470,7 @@
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+160} ${h+80}`);
             svgViewBoxes['svg-elevation'] = { x: 0, y: 0, width: w+160, height: h+80 };
+            svgOriginalSizes['svg-elevation'] = { width: w+160, height: h+80 };
             initSVGPan(svg);
         }
 
@@ -1580,18 +1588,12 @@
             zoomLevel = 100;
             document.getElementById('zoomLevel').textContent = zoomLevel;
 
-            // Reset all viewBoxes
-            svgViewBoxes = {
-                'svg-2d': { x: 0, y: 0, width: 800, height: 600 },
-                'svg-section': { x: 0, y: 0, width: 800, height: 500 },
-                'svg-elevation': { x: 0, y: 0, width: 800, height: 500 }
-            };
-
-            // Apply to all SVGs
-            Object.keys(svgViewBoxes).forEach(id => {
+            // Reset all viewBoxes to original sizes
+            Object.keys(svgOriginalSizes).forEach(id => {
+                const orig = svgOriginalSizes[id];
+                svgViewBoxes[id] = { x: 0, y: 0, width: orig.width, height: orig.height };
                 const svg = document.getElementById(id);
-                const vb = svgViewBoxes[id];
-                if (svg) svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.width} ${vb.height}`);
+                if (svg) svg.setAttribute('viewBox', `0 0 ${orig.width} ${orig.height}`);
             });
         }
 
@@ -1613,8 +1615,9 @@
             if (!svg) return;
 
             const vb = svgViewBoxes[svgId];
-            const baseWidth = svgId === 'svg-2d' ? 800 : 800;
-            const baseHeight = svgId === 'svg-2d' ? 600 : 500;
+            const orig = svgOriginalSizes[svgId];
+            const baseWidth = orig ? orig.width : 800;
+            const baseHeight = orig ? orig.height : 600;
 
             const scale = 100 / zoomLevel;
             const centerX = vb.x + vb.width / 2;
