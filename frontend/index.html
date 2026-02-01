@@ -1886,9 +1886,10 @@
                 const p1 = measurePoints[0];
                 const p2 = measurePoints[1];
 
-                // Calculate distance (assuming 12 pixels per meter based on scale in render2DPlan)
+                // Get scale based on active SVG (2D Plan = 12, Section/Elevation = 10)
+                const scale = svg.id === 'svg-2d' ? 12 : 10;
                 const pixelDist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-                const meters = (pixelDist / 12).toFixed(2);
+                const meters = (pixelDist / scale).toFixed(2);
 
                 drawMeasureLine(svg, p1, p2, meters);
                 measurePoints = [];
