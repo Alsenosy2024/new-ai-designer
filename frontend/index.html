@@ -882,11 +882,11 @@
                     <div class="panel-section">
                         <h3 class="panel-title">الأدوات</h3>
                         <div class="tool-grid">
-                            <button class="tool-btn active"><span class="tool-icon">👆</span><span class="tool-label">اختيار</span></button>
-                            <button class="tool-btn"><span class="tool-icon">✋</span><span class="tool-label">تحريك</span></button>
-                            <button class="tool-btn"><span class="tool-icon">🔍</span><span class="tool-label">تكبير</span></button>
-                            <button class="tool-btn"><span class="tool-icon">📏</span><span class="tool-label">قياس</span></button>
-                            <button class="tool-btn"><span class="tool-icon">ℹ️</span><span class="tool-label">معلومات</span></button>
+                            <button class="tool-btn active" data-tool="select" onclick="setTool('select')"><span class="tool-icon">👆</span><span class="tool-label">اختيار</span></button>
+                            <button class="tool-btn" data-tool="pan" onclick="setTool('pan')"><span class="tool-icon">✋</span><span class="tool-label">تحريك</span></button>
+                            <button class="tool-btn" data-tool="zoom" onclick="setTool('zoom')"><span class="tool-icon">🔍</span><span class="tool-label">تكبير</span></button>
+                            <button class="tool-btn" data-tool="measure" onclick="setTool('measure')"><span class="tool-icon">📏</span><span class="tool-label">قياس</span></button>
+                            <button class="tool-btn" data-tool="info" onclick="setTool('info')"><span class="tool-icon">ℹ️</span><span class="tool-label">معلومات</span></button>
                             <button class="tool-btn" onclick="goToStep('export')"><span class="tool-icon">📥</span><span class="tool-label">تصدير</span></button>
                         </div>
                     </div>
@@ -896,16 +896,16 @@
                     <div class="info-badge"><strong id="viewTitle">Floor Plan</strong> - <span id="viewInfo">Scale 1:100</span></div>
 
                     <div class="viewer-2d active" id="viewer-2d">
-                        <svg id="svg-2d" viewBox="0 0 800 600"></svg>
+                        <svg id="svg-2d" viewBox="0 0 800 600" onclick="handleSVGClick(event, this)"></svg>
                     </div>
                     <div class="viewer-3d" id="viewer-3d">
                         <canvas id="canvas-3d"></canvas>
                     </div>
                     <div class="viewer-section" id="viewer-section">
-                        <svg id="svg-section" viewBox="0 0 800 500"></svg>
+                        <svg id="svg-section" viewBox="0 0 800 500" onclick="handleSVGClick(event, this)"></svg>
                     </div>
                     <div class="viewer-elevation" id="viewer-elevation">
-                        <svg id="svg-elevation" viewBox="0 0 800 500"></svg>
+                        <svg id="svg-elevation" viewBox="0 0 800 500" onclick="handleSVGClick(event, this)"></svg>
                     </div>
 
                     <div class="viewer-controls">
@@ -1045,6 +1045,12 @@
         let scene, camera, renderer, controls;
         let zoomLevel = 100;
         let layers = { architectural: true, structural: true, mep: true, grid: true };
+
+        // SVG Pan/Zoom state
+        let viewBox = { x: 0, y: 0, width: 800, height: 600 };
+        let isPanning = false;
+        let panStart = { x: 0, y: 0 };
+        let currentTool = 'select';
 
         document.addEventListener('DOMContentLoaded', () => {
             checkServer();
@@ -1384,6 +1390,7 @@
 
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+180} ${d+180}`);
+            initSVGPan(svg);
         }
 
         function renderSection() {
@@ -1417,6 +1424,7 @@
 
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+160} ${h+80}`);
+            initSVGPan(svg);
         }
 
         function renderElevation() {
@@ -1447,6 +1455,7 @@
 
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+160} ${h+80}`);
+            initSVGPan(svg);
         }
 
         function init3DViewer() {
@@ -1550,21 +1559,86 @@
         function zoomIn() {
             zoomLevel = Math.min(400, zoomLevel + 25);
             document.getElementById('zoomLevel').textContent = zoomLevel;
+            applyZoomToSVG();
         }
 
         function zoomOut() {
             zoomLevel = Math.max(25, zoomLevel - 25);
             document.getElementById('zoomLevel').textContent = zoomLevel;
+            applyZoomToSVG();
         }
 
         function fitView() {
             zoomLevel = 100;
+            viewBox = { x: 0, y: 0, width: 800, height: 600 };
             document.getElementById('zoomLevel').textContent = zoomLevel;
+            applyZoomToSVG();
         }
 
         function resetView() {
             fitView();
             if (controls) controls.reset();
+        }
+
+        function applyZoomToSVG() {
+            const scale = 100 / zoomLevel;
+            const centerX = viewBox.x + viewBox.width / 2;
+            const centerY = viewBox.y + viewBox.height / 2;
+            const newWidth = 800 * scale;
+            const newHeight = 600 * scale;
+            viewBox.width = newWidth;
+            viewBox.height = newHeight;
+            viewBox.x = centerX - newWidth / 2;
+            viewBox.y = centerY - newHeight / 2;
+
+            // Apply to all SVG viewers
+            const svgs = ['svg-2d', 'svg-section', 'svg-elevation'];
+            svgs.forEach(id => {
+                const svg = document.getElementById(id);
+                if (svg) {
+                    svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+                }
+            });
+        }
+
+        function initSVGPan(svgElement) {
+            if (!svgElement || svgElement.dataset.panInit) return;
+            svgElement.dataset.panInit = 'true';
+            svgElement.style.cursor = 'grab';
+
+            svgElement.addEventListener('mousedown', (e) => {
+                if (currentTool !== 'pan' && currentTool !== 'select') return;
+                isPanning = true;
+                panStart = { x: e.clientX, y: e.clientY };
+                svgElement.style.cursor = 'grabbing';
+            });
+
+            svgElement.addEventListener('mousemove', (e) => {
+                if (!isPanning) return;
+                const dx = (e.clientX - panStart.x) * (viewBox.width / svgElement.clientWidth);
+                const dy = (e.clientY - panStart.y) * (viewBox.height / svgElement.clientHeight);
+                viewBox.x -= dx;
+                viewBox.y -= dy;
+                svgElement.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+                panStart = { x: e.clientX, y: e.clientY };
+            });
+
+            svgElement.addEventListener('mouseup', () => {
+                isPanning = false;
+                svgElement.style.cursor = 'grab';
+            });
+
+            svgElement.addEventListener('mouseleave', () => {
+                isPanning = false;
+                svgElement.style.cursor = 'grab';
+            });
+
+            // Mouse wheel zoom
+            svgElement.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) zoomIn();
+                else zoomOut();
+            });
         }
 
         async function exportDWG() {
@@ -1585,9 +1659,60 @@
             }
         }
 
-        function exportPDF() { window.print(); }
+        async function exportPDF() {
+            try {
+                // Capture the active viewer as image and create PDF
+                const activeViewer = document.querySelector('.viewer-2d.active, .viewer-section.active, .viewer-elevation.active');
+                if (activeViewer) {
+                    const svg = activeViewer.querySelector('svg');
+                    if (svg) {
+                        const svgData = new XMLSerializer().serializeToString(svg);
+                        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                        const url = URL.createObjectURL(svgBlob);
 
-        function exportIFC() { alert('جاري إنشاء ملف IFC...'); }
+                        // Create a simple HTML page for printing
+                        const printWindow = window.open('', '_blank');
+                        printWindow.document.write(`
+                            <!DOCTYPE html>
+                            <html>
+                            <head><title>Floor Plan - ${projectData?.name || 'Design'}</title>
+                            <style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;}svg{max-width:100%;}</style>
+                            </head>
+                            <body>${svgData}
+                            <script>setTimeout(()=>{window.print();window.close();},500);</script>
+                            </body></html>
+                        `);
+                        printWindow.document.close();
+                        return;
+                    }
+                }
+                window.print();
+            } catch (e) {
+                window.print();
+            }
+        }
+
+        async function exportIFC() {
+            try {
+                const response = await fetch(`${API_URL}/api/export/ifc`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.content_base64) {
+                        const binary = atob(data.content_base64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        downloadBlob(new Blob([bytes], { type: 'application/x-step' }), data.filename || 'design.ifc');
+                        alert('تم تحميل ملف IFC');
+                    } else {
+                        alert('IFC export غير متاح حالياً');
+                    }
+                } else {
+                    alert('IFC export غير متاح حالياً');
+                }
+            } catch (e) {
+                alert('خطأ في تصدير IFC: ' + e.message);
+            }
+        }
 
         async function exportSchedules() {
             try {
@@ -1595,9 +1720,28 @@
                     fetch(`${API_URL}/api/schedules/rooms`).then(r => r.json()),
                     fetch(`${API_URL}/api/schedules/columns`).then(r => r.json())
                 ]);
-                alert(`جداول المشروع:\n\nالغرف: ${rooms.total_spaces}\nالأعمدة: ${columns.total_columns}`);
+
+                // Generate CSV content
+                let csv = 'جدول الغرف - Room Schedule\n';
+                csv += 'ID,النوع/Type,الطابق/Floor,المساحة/Area (m²)\n';
+                if (rooms.spaces) {
+                    rooms.spaces.forEach(s => {
+                        csv += `${s.id},${s.type},${s.floor || 'N/A'},${s.area || 'N/A'}\n`;
+                    });
+                }
+
+                csv += '\nجدول الأعمدة - Column Schedule\n';
+                csv += 'ID,X (m),Y (m),الحجم/Size (mm),الاستخدام/Utilization\n';
+                if (columns.columns) {
+                    columns.columns.forEach(c => {
+                        csv += `${c.id},${c.position[0]},${c.position[1]},${c.size[0]}x${c.size[1]},${(c.utilization*100).toFixed(1)}%\n`;
+                    });
+                }
+
+                downloadCSV(csv, 'schedules.csv');
+                alert('تم تحميل الجداول بنجاح');
             } catch (e) {
-                alert('خطأ في تحميل الجداول');
+                alert('خطأ في تحميل الجداول: ' + e.message);
             }
         }
 
@@ -1607,13 +1751,191 @@
                     fetch(`${API_URL}/api/cost/estimate`).then(r => r.json()),
                     fetch(`${API_URL}/api/export/boq`).then(r => r.json())
                 ]);
-                alert(`تقدير التكلفة:\n\nالإجمالي: ${cost.grand_total_SAR.toLocaleString()} ر.س\nللمتر: ${cost.cost_per_m2_SAR.toLocaleString()} ر.س/م²`);
+
+                // Generate CSV content
+                let csv = 'جدول الكميات - Bill of Quantities (BOQ)\n\n';
+                csv += `إجمالي التكلفة/Total Cost,${cost.grand_total_SAR?.toLocaleString() || 'N/A'} SAR\n`;
+                csv += `تكلفة المتر المربع/Cost per m²,${cost.cost_per_m2_SAR?.toLocaleString() || 'N/A'} SAR/m²\n\n`;
+
+                csv += 'البند/Item,الوحدة/Unit,الكمية/Quantity,سعر الوحدة/Unit Price,الإجمالي/Total\n';
+                if (boq.items) {
+                    boq.items.forEach(item => {
+                        csv += `${item.description},${item.unit},${item.quantity},${item.unit_price},${item.total}\n`;
+                    });
+                }
+
+                downloadCSV(csv, 'boq.csv');
+                alert('تم تحميل جدول الكميات بنجاح');
             } catch (e) {
-                alert('خطأ في تحميل BOQ');
+                alert('خطأ في تحميل BOQ: ' + e.message);
             }
         }
 
-        function exportAll() { alert('جاري تجهيز جميع الملفات...'); }
+        async function exportAll() {
+            try {
+                alert('جاري تحميل جميع الملفات...');
+                await Promise.all([
+                    exportDWG(),
+                    exportSchedules(),
+                    exportBOQ()
+                ]);
+                alert('تم تحميل جميع الملفات!');
+            } catch (e) {
+                alert('خطأ في التحميل: ' + e.message);
+            }
+        }
+
+        function downloadCSV(content, filename) {
+            const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8' });
+            downloadBlob(blob, filename);
+        }
+
+        // Tool Management
+        let measurePoints = [];
+
+        function setTool(toolName) {
+            currentTool = toolName;
+
+            // Update UI - remove active from all, add to selected
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.querySelector(`.tool-btn[data-tool="${toolName}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            // Update cursor based on tool
+            const cursors = {
+                'select': 'default',
+                'pan': 'grab',
+                'zoom': 'zoom-in',
+                'measure': 'crosshair',
+                'info': 'help'
+            };
+
+            const svgs = document.querySelectorAll('#svg-2d, #svg-section, #svg-elevation');
+            svgs.forEach(svg => {
+                if (svg) svg.style.cursor = cursors[toolName] || 'default';
+            });
+
+            // Clear measure points when switching tools
+            if (toolName !== 'measure') {
+                measurePoints = [];
+                clearMeasureLines();
+            }
+        }
+
+        function handleSVGClick(e, svg) {
+            if (currentTool === 'measure') {
+                handleMeasureClick(e, svg);
+            } else if (currentTool === 'info') {
+                handleInfoClick(e, svg);
+            }
+        }
+
+        function handleMeasureClick(e, svg) {
+            const rect = svg.getBoundingClientRect();
+            const currentViewBox = svg.getAttribute('viewBox').split(' ').map(Number);
+            const vbX = currentViewBox[0], vbY = currentViewBox[1];
+            const vbW = currentViewBox[2], vbH = currentViewBox[3];
+
+            const x = vbX + (e.clientX - rect.left) / rect.width * vbW;
+            const y = vbY + (e.clientY - rect.top) / rect.height * vbH;
+
+            measurePoints.push({ x, y });
+
+            if (measurePoints.length === 1) {
+                // Draw start point marker
+                addMeasureMarker(svg, x, y);
+            } else if (measurePoints.length === 2) {
+                const p1 = measurePoints[0];
+                const p2 = measurePoints[1];
+
+                // Calculate distance (assuming 12 pixels per meter based on scale in render2DPlan)
+                const pixelDist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+                const meters = (pixelDist / 12).toFixed(2);
+
+                drawMeasureLine(svg, p1, p2, meters);
+                measurePoints = [];
+            }
+        }
+
+        function addMeasureMarker(svg, x, y) {
+            const ns = 'http://www.w3.org/2000/svg';
+            const circle = document.createElementNS(ns, 'circle');
+            circle.setAttribute('cx', x);
+            circle.setAttribute('cy', y);
+            circle.setAttribute('r', '5');
+            circle.setAttribute('fill', '#ef4444');
+            circle.setAttribute('class', 'measure-marker');
+            svg.appendChild(circle);
+        }
+
+        function drawMeasureLine(svg, p1, p2, distance) {
+            const ns = 'http://www.w3.org/2000/svg';
+
+            // Draw line
+            const line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', p1.x);
+            line.setAttribute('y1', p1.y);
+            line.setAttribute('x2', p2.x);
+            line.setAttribute('y2', p2.y);
+            line.setAttribute('stroke', '#ef4444');
+            line.setAttribute('stroke-width', '2');
+            line.setAttribute('class', 'measure-line');
+            svg.appendChild(line);
+
+            // Draw end marker
+            const circle = document.createElementNS(ns, 'circle');
+            circle.setAttribute('cx', p2.x);
+            circle.setAttribute('cy', p2.y);
+            circle.setAttribute('r', '5');
+            circle.setAttribute('fill', '#ef4444');
+            circle.setAttribute('class', 'measure-marker');
+            svg.appendChild(circle);
+
+            // Draw distance label
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+
+            const bg = document.createElementNS(ns, 'rect');
+            bg.setAttribute('x', midX - 25);
+            bg.setAttribute('y', midY - 12);
+            bg.setAttribute('width', '50');
+            bg.setAttribute('height', '16');
+            bg.setAttribute('fill', '#ef4444');
+            bg.setAttribute('rx', '3');
+            bg.setAttribute('class', 'measure-label');
+            svg.appendChild(bg);
+
+            const text = document.createElementNS(ns, 'text');
+            text.setAttribute('x', midX);
+            text.setAttribute('y', midY);
+            text.setAttribute('fill', '#fff');
+            text.setAttribute('font-size', '10');
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            text.textContent = `${distance}m`;
+            text.setAttribute('class', 'measure-text');
+            svg.appendChild(text);
+        }
+
+        function clearMeasureLines() {
+            document.querySelectorAll('.measure-line, .measure-marker, .measure-label, .measure-text').forEach(el => el.remove());
+        }
+
+        function handleInfoClick(e, svg) {
+            // Find element under click and show info
+            const target = e.target;
+            if (target.tagName === 'rect' || target.tagName === 'text') {
+                const info = [];
+                if (target.getAttribute('fill')) info.push(`Fill: ${target.getAttribute('fill')}`);
+                if (target.getAttribute('width')) info.push(`Width: ${target.getAttribute('width')}`);
+                if (target.getAttribute('height')) info.push(`Height: ${target.getAttribute('height')}`);
+                if (target.textContent && target.tagName === 'text') info.push(`Text: ${target.textContent}`);
+
+                if (info.length > 0) {
+                    alert('معلومات العنصر:\n' + info.join('\n'));
+                }
+            }
+        }
 
         function downloadBlob(blob, filename) {
             const url = URL.createObjectURL(blob);
