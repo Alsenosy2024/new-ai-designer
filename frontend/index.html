@@ -1046,11 +1046,16 @@
         let zoomLevel = 100;
         let layers = { architectural: true, structural: true, mep: true, grid: true };
 
-        // SVG Pan/Zoom state
-        let viewBox = { x: 0, y: 0, width: 800, height: 600 };
+        // SVG Pan/Zoom state (per SVG)
+        let svgViewBoxes = {
+            'svg-2d': { x: 0, y: 0, width: 800, height: 600 },
+            'svg-section': { x: 0, y: 0, width: 800, height: 500 },
+            'svg-elevation': { x: 0, y: 0, width: 800, height: 500 }
+        };
         let isPanning = false;
         let panStart = { x: 0, y: 0 };
         let currentTool = 'select';
+        let activeSvgId = 'svg-2d';
 
         document.addEventListener('DOMContentLoaded', () => {
             checkServer();
@@ -1570,9 +1575,21 @@
 
         function fitView() {
             zoomLevel = 100;
-            viewBox = { x: 0, y: 0, width: 800, height: 600 };
             document.getElementById('zoomLevel').textContent = zoomLevel;
-            applyZoomToSVG();
+
+            // Reset all viewBoxes
+            svgViewBoxes = {
+                'svg-2d': { x: 0, y: 0, width: 800, height: 600 },
+                'svg-section': { x: 0, y: 0, width: 800, height: 500 },
+                'svg-elevation': { x: 0, y: 0, width: 800, height: 500 }
+            };
+
+            // Apply to all SVGs
+            Object.keys(svgViewBoxes).forEach(id => {
+                const svg = document.getElementById(id);
+                const vb = svgViewBoxes[id];
+                if (svg) svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.width} ${vb.height}`);
+            });
         }
 
         function resetView() {
@@ -1580,46 +1597,60 @@
             if (controls) controls.reset();
         }
 
-        function applyZoomToSVG() {
-            const scale = 100 / zoomLevel;
-            const centerX = viewBox.x + viewBox.width / 2;
-            const centerY = viewBox.y + viewBox.height / 2;
-            const newWidth = 800 * scale;
-            const newHeight = 600 * scale;
-            viewBox.width = newWidth;
-            viewBox.height = newHeight;
-            viewBox.x = centerX - newWidth / 2;
-            viewBox.y = centerY - newHeight / 2;
+        function getActiveSvgId() {
+            if (document.querySelector('.viewer-2d.active')) return 'svg-2d';
+            if (document.querySelector('.viewer-section.active')) return 'svg-section';
+            if (document.querySelector('.viewer-elevation.active')) return 'svg-elevation';
+            return 'svg-2d';
+        }
 
-            // Apply to all SVG viewers
-            const svgs = ['svg-2d', 'svg-section', 'svg-elevation'];
-            svgs.forEach(id => {
-                const svg = document.getElementById(id);
-                if (svg) {
-                    svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
-                }
-            });
+        function applyZoomToSVG() {
+            const svgId = getActiveSvgId();
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+
+            const vb = svgViewBoxes[svgId];
+            const baseWidth = svgId === 'svg-2d' ? 800 : 800;
+            const baseHeight = svgId === 'svg-2d' ? 600 : 500;
+
+            const scale = 100 / zoomLevel;
+            const centerX = vb.x + vb.width / 2;
+            const centerY = vb.y + vb.height / 2;
+            const newWidth = baseWidth * scale;
+            const newHeight = baseHeight * scale;
+
+            vb.width = newWidth;
+            vb.height = newHeight;
+            vb.x = centerX - newWidth / 2;
+            vb.y = centerY - newHeight / 2;
+
+            svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.width} ${vb.height}`);
         }
 
         function initSVGPan(svgElement) {
             if (!svgElement || svgElement.dataset.panInit) return;
             svgElement.dataset.panInit = 'true';
             svgElement.style.cursor = 'grab';
+            const svgId = svgElement.id;
 
             svgElement.addEventListener('mousedown', (e) => {
                 if (currentTool !== 'pan' && currentTool !== 'select') return;
                 isPanning = true;
                 panStart = { x: e.clientX, y: e.clientY };
+                activeSvgId = svgId;
                 svgElement.style.cursor = 'grabbing';
             });
 
             svgElement.addEventListener('mousemove', (e) => {
-                if (!isPanning) return;
-                const dx = (e.clientX - panStart.x) * (viewBox.width / svgElement.clientWidth);
-                const dy = (e.clientY - panStart.y) * (viewBox.height / svgElement.clientHeight);
-                viewBox.x -= dx;
-                viewBox.y -= dy;
-                svgElement.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+                if (!isPanning || activeSvgId !== svgId) return;
+                const vb = svgViewBoxes[svgId];
+                if (!vb) return;
+
+                const dx = (e.clientX - panStart.x) * (vb.width / svgElement.clientWidth);
+                const dy = (e.clientY - panStart.y) * (vb.height / svgElement.clientHeight);
+                vb.x -= dx;
+                vb.y -= dy;
+                svgElement.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.width} ${vb.height}`);
                 panStart = { x: e.clientX, y: e.clientY };
             });
 
@@ -1636,6 +1667,7 @@
             // Mouse wheel zoom
             svgElement.addEventListener('wheel', (e) => {
                 e.preventDefault();
+                activeSvgId = svgId;
                 if (e.deltaY < 0) zoomIn();
                 else zoomOut();
             });
