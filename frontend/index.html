@@ -1395,6 +1395,7 @@
 
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+180} ${d+180}`);
+            svgViewBoxes['svg-2d'] = { x: 0, y: 0, width: w+180, height: d+180 };
             initSVGPan(svg);
         }
 
@@ -1429,6 +1430,7 @@
 
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+160} ${h+80}`);
+            svgViewBoxes['svg-section'] = { x: 0, y: 0, width: w+160, height: h+80 };
             initSVGPan(svg);
         }
 
@@ -1460,6 +1462,7 @@
 
             svg.innerHTML = content;
             svg.setAttribute('viewBox', `0 0 ${w+160} ${h+80}`);
+            svgViewBoxes['svg-elevation'] = { x: 0, y: 0, width: w+160, height: h+80 };
             initSVGPan(svg);
         }
 
