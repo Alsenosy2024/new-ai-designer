@@ -1122,7 +1122,9 @@
                 type: document.getElementById('buildingType').value,
                 floors: parseInt(document.getElementById('floors').value) || 1,
                 gfa: parseFloat(document.getElementById('totalArea').value) || 1000,
-                region: document.getElementById('location').value
+                region: document.getElementById('location').value,
+                structural_system: document.getElementById('structuralSystem').value,
+                brief: document.getElementById('requirements').value
             };
 
             completeStep('input');
@@ -1338,6 +1340,10 @@
 
             const titles = { '2d': 'Floor Plan', '3d': '3D Model', 'section': 'Section', 'elevation': 'Elevation' };
             document.getElementById('viewTitle').textContent = titles[view];
+
+            // Update scale info based on view type
+            const scales = { '2d': 'Scale 1:100', '3d': '3D View', 'section': 'Scale 1:100', 'elevation': 'Scale 1:100' };
+            document.getElementById('viewInfo').textContent = scales[view];
         }
 
         function toggleLayer(el) {
@@ -1576,12 +1582,20 @@
             zoomLevel = Math.min(400, zoomLevel + 25);
             document.getElementById('zoomLevel').textContent = zoomLevel;
             applyZoomToSVG();
+            updateScaleDisplay();
         }
 
         function zoomOut() {
             zoomLevel = Math.max(25, zoomLevel - 25);
             document.getElementById('zoomLevel').textContent = zoomLevel;
             applyZoomToSVG();
+            updateScaleDisplay();
+        }
+
+        function updateScaleDisplay() {
+            // Update viewInfo with current scale (base scale is 1:100 at 100% zoom)
+            const effectiveScale = Math.round(100 * (100 / zoomLevel));
+            document.getElementById('viewInfo').textContent = `Scale 1:${effectiveScale}`;
         }
 
         function fitView() {
