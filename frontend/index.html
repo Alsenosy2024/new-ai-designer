@@ -886,6 +886,7 @@
                             <button class="tool-btn" data-tool="pan" onclick="setTool('pan')"><span class="tool-icon">✋</span><span class="tool-label">تحريك</span></button>
                             <button class="tool-btn" data-tool="zoom" onclick="setTool('zoom')"><span class="tool-icon">🔍</span><span class="tool-label">تكبير</span></button>
                             <button class="tool-btn" data-tool="measure" onclick="setTool('measure')"><span class="tool-icon">📏</span><span class="tool-label">قياس</span></button>
+                            <button class="tool-btn" onclick="clearMeasurements()"><span class="tool-icon">🗑️</span><span class="tool-label">مسح القياسات</span></button>
                             <button class="tool-btn" data-tool="info" onclick="setTool('info')"><span class="tool-icon">ℹ️</span><span class="tool-label">معلومات</span></button>
                             <button class="tool-btn" onclick="goToStep('export')"><span class="tool-icon">📥</span><span class="tool-label">تصدير</span></button>
                         </div>
@@ -1114,14 +1115,36 @@
 
         async function startDesign() {
             const btn = document.getElementById('startBtn');
+
+            // Validate required fields
+            const projectName = document.getElementById('projectName').value.trim();
+            const totalArea = parseFloat(document.getElementById('totalArea').value);
+            const floors = parseInt(document.getElementById('floors').value);
+
+            if (!projectName) {
+                alert('يرجى إدخال اسم المشروع');
+                document.getElementById('projectName').focus();
+                return;
+            }
+            if (!totalArea || totalArea < 100) {
+                alert('يرجى إدخال مساحة صالحة (100 م² على الأقل)');
+                document.getElementById('totalArea').focus();
+                return;
+            }
+            if (!floors || floors < 1) {
+                alert('يرجى إدخال عدد طوابق صالح');
+                document.getElementById('floors').focus();
+                return;
+            }
+
             btn.disabled = true;
             btn.textContent = 'جاري البدء...';
 
             projectData = {
-                name: document.getElementById('projectName').value,
+                name: projectName,
                 type: document.getElementById('buildingType').value,
-                floors: parseInt(document.getElementById('floors').value) || 1,
-                gfa: parseFloat(document.getElementById('totalArea').value) || 1000,
+                floors: floors,
+                gfa: totalArea,
                 region: document.getElementById('location').value,
                 structural_system: document.getElementById('structuralSystem').value,
                 brief: document.getElementById('requirements').value
@@ -1131,7 +1154,13 @@
             enableStep('design');
             goToStep('design');
 
-            await runDesignPipeline();
+            try {
+                await runDesignPipeline();
+            } catch (e) {
+                // Re-enable button on error so user can retry
+                btn.disabled = false;
+                btn.textContent = 'بدء التصميم';
+            }
         }
 
         async function runDesignPipeline() {
@@ -1972,6 +2001,12 @@
 
         function clearMeasureLines() {
             document.querySelectorAll('.measure-line, .measure-marker, .measure-label, .measure-text').forEach(el => el.remove());
+        }
+
+        function clearMeasurements() {
+            clearMeasureLines();
+            measurePoints = [];
+            addLog('تم مسح جميع القياسات', 'info');
         }
 
         function handleInfoClick(e, svg) {
